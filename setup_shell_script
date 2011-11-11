@@ -1,1 +1,3 @@
-# Put shell script here to initialize virtual disk
+#!/bin/bash
+
+dd if=/dev/zero of=simulated_device bs=1024 count=250000
