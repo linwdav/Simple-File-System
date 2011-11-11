@@ -24,14 +24,14 @@ int my_creat (char * path)
 /* sequentially read from a file */
 int my_read (int fd, void * buf, int count)
 {
-  printf ("my_read (%d, %x, %d) not implemented\n", fd, (unsigned int *)buf, count);
+  printf ("my_read (%d, %x, %d) not implemented\n", fd, *((unsigned int *)buf), count);
   return -1;
 }
 
 /* sequentially write to a file */
 int my_write (int fd, void * buf, int count)
 {
-  printf ("my_write (%d, %x, %d) not implemented\n", fd, (unsigned int *)buf, count);
+  printf ("my_write (%d, %x, %d) not implemented\n", fd, *((unsigned int *)buf), count);
   return -1;
 }
 

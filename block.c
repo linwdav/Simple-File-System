@@ -11,17 +11,7 @@
  * it will do what you want.
  */
 
-
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-#include <unistd.h>
-#include <stdio.h>
-#include "p6.h"
-
-/* only open the file once */
-static int fd = -1;
-static int devsize = 0;
+#include "block.h"
 
 /* returns the device size (in blocks) if the operation is successful,
  * and -1 otherwise */

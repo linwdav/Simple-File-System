@@ -32,4 +32,3 @@ extern int read_block (int block_num, char * block);
 extern int write_block (int block_num, char * block);
 
 #endif /* P6_H */
-
