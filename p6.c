@@ -82,7 +82,12 @@ int my_rmdir (const char * path)
  * and if not, create one. */
 void my_mkfs ()
 {
-  char buffer[BLOCKSIZE];
+  
+  /* ALL OPERATIONS BELOW ASSUME THAT DISK HAS BEEN 
+     INITIALIZED TO CONTAIN ALL 0s */
+
+  // Buffer to be used to write file system information to disk.
+  unsigned char buffer[BLOCKSIZE];
   
   // Attempt to open the disk
   if ((num_blocks = dev_open()) < 0) {
@@ -96,25 +101,32 @@ void my_mkfs ()
     exit(1);
   }
   
-  // Check block 0 to see if root directory exists
+  // Check block 0 to see if root directory exists (first byte on block 0 == 'd')
   if (buffer[0] != 'd') {
   
     // If not create file system.
     // Create root directory at block 0.
     buffer[0] = 'd';
     
+    // Next block field will always be initialized to 0
     int next_block = 0;
+    
+    // Number of used bytes (only header so far)
     short header_size = HEADER_SIZE;
+    
+    // since buffer is immutable, create a pointer to it.
     char * buffer_ptr = buffer;
 
+    // Write header information (next block and remainder fields)
     memcpy(++buffer_ptr, &next_block, sizeof(next_block));
-    
     memcpy((buffer_ptr+sizeof(next_block)), &header_size, sizeof(header_size));
     
+    // Write header information to disk at the root block
     write_block(ROOT_BLOCK, buffer);
     
     // Create free list bitmap
-    // Assumption, all blocks are set to 0.
+    
+    // number of blocks needed for bitmap
     int bitmap_num_blocks;
     
     // Determine how many blocks the free list bitmap will fit in.
@@ -128,16 +140,23 @@ void my_mkfs ()
     // Write the end block of the bitmap to the free list parameters
     int end_bitmap_block = FREE_LIST_BITMAP_START + bitmap_num_blocks - 1;
     
+    // Clear buffer
     memset(buffer, 0, HEADER_SIZE);
-    buffer_ptr = buffer;
-    memcpy(buffer_ptr, &end_bitmap_block, sizeof(end_bitmap_block));
+    memcpy(buffer, &end_bitmap_block, sizeof(end_bitmap_block));
     
     write_block(FREE_LIST_BITMAP_PARAMS, buffer);
     
-    // Allocate 1's to all system blocks and bitmap_num_blocks
+    // Allocate 1's to all system blocks and bitmap_num_blocks in the free
+    // list bitmap
+    
+    // The number of blocks that are never free go from 0 -> (never_free - 1)
     int never_free = NUM_SYSTEM_BLOCKS + bitmap_num_blocks;
+    
+    // how many blocks the never_free bits will take up.
     int never_free_blocks;
      
+    // remainder = how many bits of never_free section of free list bitmap
+    // would be in the last block  
     int remainder = never_free % BLOCKSIZE; 
     if (remainder == 0) {
       never_free_blocks = never_free / BLOCKSIZE;
@@ -149,31 +168,43 @@ void my_mkfs ()
       never_free_blocks = 0;
     }
     
+    // Set buffer to all 1s (entire block of all 1s)
     memset(buffer, 0xFF, BLOCKSIZE);
     
+    // Write all 1s to as many full blocks as necessary starting
+    // at the first block containing the free list bitmap
     int i;
     for(i = 0; i < never_free_blocks; i++) {
       write_block(i + FREE_LIST_BITMAP_START, buffer);
     }    
     
-    // Set remainder to 1s if needed
-    int remainder_of_remainder = remainder % 8;
-    int dividend_of_remainder = remainder / 8;
-    
-    int j;
-    memset(buffer, 0, BLOCKSIZE);
-    
-    for (j = 0; j < dividend_of_remainder; j++) {
+    // put as many 1s as 'remainder' in the last block of 
+    // the free list bitmap blocks.
+    if (remainder != 0) {
+      // Set buffer to all 0s (entire block of all 0s)
+      memset(buffer, 0, BLOCKSIZE);
+      
+      // Find remainder and dividend to calculate how many
+      // bytes are needed and the remainder.
+      int remainder_of_remainder = remainder % 8;
+      int dividend_of_remainder = remainder / 8;
+      
+      int j;
+      // Write as many full bytes of 1s as necessary
+      for (j = 0; j < dividend_of_remainder; j++) {
+        buffer[j] = 0xFF;
+      }
+      
+      // Write the remaining bits
+      
+      // Set all bits in last byte to all 1s
       buffer[j] = 0xFF;
-    }
-    /*
-    if (remainder_of_remainder > 0) {
-      memset(&buffer[j], 0xFF, 1);
-      buffer[j] << (8 - remainder_of_remainder);
-    }
-    */
+      
+      // Shift in zeros from the right
+      buffer[j] = buffer[j] << (8 - remainder_of_remainder);
+    } // End if
     
-    
+    // Write the next block (this is the last block of the free list bitmap)  
     write_block(i + FREE_LIST_BITMAP_START, buffer);
     
     printf("File system created.\n");
