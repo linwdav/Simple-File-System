@@ -1,0 +1,6 @@
+#!/bin/bash
+
+rm -f simulated_device
+./setup_shell_script
+make
+gdb testp6
