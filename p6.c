@@ -16,6 +16,7 @@
 #define FREE_LIST_BITMAP_START 2
 #define HEADER_SIZE 8
 #define BITS_IN_BLOCK (8 * BLOCKSIZE)
+#define BITS_IN_BYTE 8
 
 int num_blocks;
 
@@ -202,16 +203,120 @@ void my_mkfs ()
       
       // Shift in zeros from the right
       buffer[j] = buffer[j] << (8 - remainder_of_remainder);
+
     } // End if
     
     // Write the next block (this is the last block of the free list bitmap)  
     write_block(i + FREE_LIST_BITMAP_START, buffer);
-    
+
     printf("File system created.\n");
   }
   else {
     printf("File system already exists.\n");
   }
   
+  /* David's test code
+  memset(buffer, 0xFF, BLOCKSIZE);
+  int i;
+  int num_whole_blocks = num_blocks / BITS_IN_BLOCK;
+  for(i = FREE_LIST_BITMAP_START; i < num_whole_blocks + FREE_LIST_BITMAP_START; i++) {
+    write_block(i, buffer);
+  }
+  int num = requestNextFreeBlock();
+  printf("BLOCK %d IS FREE\n", num);
+  int *p;
+  freeBlocks(1, p);
+  setBlockInBitmapToStatus(1, 1);
+  */
+
 } // End my_mkfs
 
+/* Return the block number to the next free block in free block list. */
+int requestNextFreeBlock ()
+{
+  // Buffer to read blocks from file system on disk.
+  unsigned char buffer[BLOCKSIZE];
+
+  // Get the number of whole bitmap blocks
+  int num_whole_blocks = num_blocks / BITS_IN_BLOCK;
+
+  // remainder = # of bits in the last bitmap block
+  int remainder = num_blocks - (num_whole_blocks * BITS_IN_BLOCK);
+
+  // Loop through each full bitmap block
+  int i;
+  for (i = FREE_LIST_BITMAP_START; i < num_whole_blocks + FREE_LIST_BITMAP_START; i++) {
+    // Read in bitmap block
+    if (read_block (i, buffer) < 0) {
+      printf("Error reading block #%d\n", i);
+      exit(1);
+    }
+    // Loop through each byte in the block
+    int j;
+    for (j = 0; j < BLOCKSIZE; j++) {
+      // If the byte is not 11111111 then it has a 0 bit somewhere in the byte
+      if (buffer[j] != 0xFF) {
+        int bit_position = 0;
+        int k;
+        // Examine each bit in the byte for the 0
+        for (k = BITS_IN_BYTE - 1; k >= 0; k--) {
+          int bit = (buffer[j]>>k)&1;
+          if (bit == 0) {
+          // Return the final block number
+          int block_number = ((i - 2) * BITS_IN_BLOCK) + (j * BITS_IN_BYTE) +
+                                                              bit_position + 1;
+          return block_number;
+          }
+          bit_position++;
+        }
+      }
+    }
+  }
+
+  // If execution gets to this point, check the last partial bitmap block
+  if (remainder > 0) {
+    // Read in bitmap block
+    if (read_block (i, buffer) < 0) {
+      printf("Error reading block #%d\n", i);
+      exit(1);
+    }
+    int bytes_to_check = remainder / 8;
+    // Loop through each byte in the block
+    int j;
+    for (j = 0; j < bytes_to_check; j++) {
+      // If the byte is not 11111111 then it has a 0 bit somewhere in the byte
+      if (buffer[j] != 0xFF) {
+        int bit_position = 0;
+        int k;
+        // Examine each bit in the byte for the 0
+        for (k = BITS_IN_BYTE - 1; k >= 0; k--) {
+          int bit = (buffer[j]>>k)&1;
+          if (bit == 0) {
+          // Return the final block number
+          int block_number = ((i - 2) * BITS_IN_BLOCK) + (j * BITS_IN_BYTE) +
+                                                              bit_position + 1;
+          return block_number;
+          }
+          bit_position++;
+        }
+      }
+    }
+  }
+
+  // Return error code if a free block does not exist
+  return -1;
+}
+
+/* Given a list of block numbers, free them in the bitmap (flip all to 0) */
+int freeBlocks (int n, int *listOfBlocks)
+{
+  printf("freeBlocks\n");
+  return 0;
+}
+
+/* Set a bit in bitmap and return success or failure. */
+int setBlockInBitmapToStatus (int status, int blockNumber)
+{
+  printf("setBlockInBitmapToStatus\n");
+  return 0;
+}

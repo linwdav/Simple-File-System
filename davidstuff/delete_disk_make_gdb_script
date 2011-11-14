@@ -2,5 +2,6 @@
 
 rm -f simulated_device
 ./setup_shell_script
+make clean
 make
-#gdb testp6
+gdb testp6
