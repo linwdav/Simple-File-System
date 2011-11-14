@@ -262,10 +262,10 @@ int requestNextFreeBlock ()
         for (k = BITS_IN_BYTE - 1; k >= 0; k--) {
           int bit = (buffer[j]>>k)&1;
           if (bit == 0) {
-          // Return the final block number
-          int block_number = ((i - 2) * BITS_IN_BLOCK) + (j * BITS_IN_BYTE) +
-                                                              bit_position + 1;
-          return block_number;
+            // Return the final block number
+            int block_number = ((i - 2) * BITS_IN_BLOCK) + (j * BITS_IN_BYTE) +
+                                                                bit_position + 1;
+            return block_number;
           }
           bit_position++;
         }
@@ -292,10 +292,10 @@ int requestNextFreeBlock ()
         for (k = BITS_IN_BYTE - 1; k >= 0; k--) {
           int bit = (buffer[j]>>k)&1;
           if (bit == 0) {
-          // Return the final block number
-          int block_number = ((i - 2) * BITS_IN_BLOCK) + (j * BITS_IN_BYTE) +
-                                                              bit_position + 1;
-          return block_number;
+            // Return the final block number
+            int block_number = ((i - 2) * BITS_IN_BLOCK) + (j * BITS_IN_BYTE) +
+                                                                bit_position + 1;
+            return block_number;
           }
           bit_position++;
         }
