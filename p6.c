@@ -10,6 +10,7 @@
 #include <string.h>
 #include "block.h"
 #include "file_operations.h"
+#include "directory_operations.h"
 
 // Number of blocks on disk - value returned via dev_open()
 int num_blocks;
@@ -99,8 +100,22 @@ int my_mkdir (const char * path)
 
 int my_rmdir (const char * path)
 {
-  printf ("my_rmdir (%s) not implemented\n", path);
-  return -1;
+  int blockNums[2];
+
+  parseRemoveNums(path, blockNums);
+  if (blockNums[1] == -1) {
+    return -1;
+  }
+
+  if (determineFileType(blockNums[1]) != 'd') {
+	return -1;
+  }
+
+  deleteDirectoryRecursively(blockNums[1]);
+
+  // Remove entry from parent directory.
+
+  return 0;
 }
 
 /* check to see if the device already has a file system on it,
