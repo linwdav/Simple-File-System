@@ -32,9 +32,6 @@ extern int my_mkdir (const char * path);
 extern int my_rmdir (const char * path);
 
 extern void my_mkfs ();
-extern int requestNextFreeBlock ();
-extern int freeBlocks (int n, int *listOfBlocks);
-extern int setBlockInBitmapToStatus (int status, int blockNumber);
 
 /* provided by the lower layer */
 
