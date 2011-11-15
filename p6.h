@@ -15,6 +15,8 @@
 #define MAX_OPEN_FILES          10
 
 #define HEADER_SIZE             8
+#define BYTES_IN_SHORT          2
+#define BYTES_IN_INT            4
 #define BITS_IN_BYTE            8
 #define BITS_IN_BLOCK           (8 * BLOCKSIZE)
 #define PATH_SEPARATOR          '/'
