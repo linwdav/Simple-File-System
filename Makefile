@@ -2,7 +2,7 @@
 
 CC=gcc -g
 
-testp6: testp6.o p6.o block.o
+testp6: testp6.o p6.o block.o file_operations.o
 
 clean:
 	rm -f testp6 *.o
