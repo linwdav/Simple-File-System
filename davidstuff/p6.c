@@ -215,19 +215,23 @@ void my_mkfs ()
     printf("File system already exists.\n");
   }
   
-  /* David's test code
-  memset(buffer, 0xFF, BLOCKSIZE);
-  int i;
-  int num_whole_blocks = num_blocks / BITS_IN_BLOCK;
-  for(i = FREE_LIST_BITMAP_START; i < num_whole_blocks + FREE_LIST_BITMAP_START; i++) {
-    write_block(i, buffer);
-  }
+  // David's test code
+  /*
   int num = requestNextFreeBlock();
-  printf("BLOCK %d IS FREE\n", num);
-  int *p;
-  freeBlocks(1, p);
-  setBlockInBitmapToStatus(1, 1);
+  printf("BLOCK %d IS FREE AT INDEX %d\n", num, num-1);
   */
+
+  int numBlocksToFree = 8;
+  int blocksToFree[numBlocksToFree];
+  int i;
+  int j = 1;
+  for (i = 0; i < numBlocksToFree; i++) {
+    blocksToFree[i] = j;
+    j += 2;
+  }
+  freeBlocks(numBlocksToFree, blocksToFree);
+  //setBlockInBitmapToStatus(1, 1);
+  //
 
 } // End my_mkfs
 
@@ -264,7 +268,7 @@ int requestNextFreeBlock ()
           if (bit == 0) {
             // Return the final block number
             int block_number = ((i - 2) * BITS_IN_BLOCK) + (j * BITS_IN_BYTE) +
-                                                                bit_position + 1;
+                                                                          bit_position;
             return block_number;
           }
           bit_position++;
@@ -273,7 +277,8 @@ int requestNextFreeBlock ()
     }
   }
 
-  // If execution gets to this point, check the last partial bitmap block
+  // If execution gets to this point, then we could not find a free block in any
+  // of the whole blocks. Check the last partial bitmap block.
   if (remainder > 0) {
     // Read in bitmap block
     if (read_block (i, buffer) < 0) {
@@ -294,7 +299,7 @@ int requestNextFreeBlock ()
           if (bit == 0) {
             // Return the final block number
             int block_number = ((i - 2) * BITS_IN_BLOCK) + (j * BITS_IN_BYTE) +
-                                                                bit_position + 1;
+                                                                          bit_position;
             return block_number;
           }
           bit_position++;
@@ -307,10 +312,57 @@ int requestNextFreeBlock ()
   return -1;
 }
 
-/* Given a list of block numbers, free them in the bitmap (flip all to 0) */
+/* Given a list of block numbers, free them in the bitmap (flip all to 0).
+ * To free the 1st block, pass in 0 in the array. Likewise, pass in 1023 to free
+ * the 1024th block.
+ */
 int freeBlocks (int n, int *listOfBlocks)
 {
-  printf("freeBlocks\n");
+  int i;
+  for (i = 0; i < n; i++) {
+    // Get the bit to free
+    int blockToFree = listOfBlocks[i];
+
+    // Find the bitmap block that contains the bit to free
+    int bitmapBlock = blockToFree / BITS_IN_BLOCK;
+
+    // Buffer to read blocks from file system on disk
+    unsigned char buffer[BLOCKSIZE];
+
+    // Read in the bitmap block that contains the bit we want to find
+    if (read_block (FREE_LIST_BITMAP_START + bitmapBlock, buffer) < 0) {
+      printf("Error reading block #%d\n", i);
+      exit(1);
+    }
+
+    // Find the index of the bit to flip within the block
+    int bitIndexWithinBlock = blockToFree % BITS_IN_BLOCK;
+
+    // Find which byte the bit is in
+    int byteIndex = bitIndexWithinBlock / BITS_IN_BYTE;
+
+    // Find the index of the bit within the byte. For example, the bit at index
+    // 6 for 1011 1111 is 0.
+    int bitIndexWithinByte = blockToFree % BITS_IN_BYTE;
+
+    printf("Block to flip %d\n", blockToFree);
+    printf("Bitmap block %d\n", bitmapBlock);
+    printf("Bit index within block %d\n", bitIndexWithinBlock);
+    printf("Byte index within block %d\n", byteIndex);
+    printf("Bit index within byte %d\n", bitIndexWithinByte);
+
+    // Actual index is from right to left. For example, flipping the bit at index 7
+    // for 1111 1111 results in 0111 1111.
+    int actualIndex = BITS_IN_BYTE - bitIndexWithinByte - 1;
+
+    // Flip the bit to 0
+    buffer[byteIndex] = buffer[byteIndex]&=~(1<<(actualIndex));
+
+    // Write buffer back to disk
+    write_block(FREE_LIST_BITMAP_START + bitmapBlock, buffer);
+  }
+  unsigned char buffer[BLOCKSIZE];
+  read_block (FREE_LIST_BITMAP_START, buffer);
   return 0;
 }
 
