@@ -1,39 +1,58 @@
 #include "file_operations.h"
 
+int search_directory_for_name(char * name, int directory_block_num) {
+   // Return value
+   int block_num_of_name;
+   
+   // Get contents of directory
+   char buffer[BLOCKSIZE];
+   
+   // If an invalid block number, return -1
+   if (read_block(directory_block_num, buffer) < 0) {
+     return -1;
+   }
+   
+   // Directory information
+   unsigned short allocated_bytes;
+   unsigned int next_block;
+   
+   char * buffer_ptr = buffer;
+  
+   // Get directory information
+   memcpy(&next_block, buffer_ptr + 1, BYTES_IN_INT);
+   memcpy(&allocated_bytes, buffer_ptr + 5, BYTES_IN_SHORT);
+   
+   
+} // end search_directory_for_name
+
 /* 
- * Returns the block number for a given directory
+ * Returns the block number for a given directory.  Example: /foo/bar/hello.txt
  */
 int get_path_block_num (char * path, int current_directory_block_num) {
-  // Get contents of directory at beginning of path
-  char buffer[BLOCKSIZE];
-    
+  
   // Search for next separator
   char *ptr_next_separator = strchr(path + 1, PATH_SEPARATOR);
   
+  // split out next directory/file name
+  char next_name[MAX_FILE_NAME_LENGTH];
+  
+  // There are more directories to traverse
   if (ptr_next_separator) {
-    int next_directory_block_num;
+
+    strncpy(next_name, path + 1, ptr_next_separator - path);
     
-    // split out next directory name
-    char next_directory[MAX_FILE_NAME_LENGTH];
-    strncpy(next_directory, path + 1, ptr_next_separator - path + 1);
-    
-    // search through buffer for directory name
-    
-    // If an invalid block number, return -1
-    if (read_block(current_directory_block_num, buffer) < 0) {
-      return -1;
-    }
-    
-    
-    
-    // look for delimiter
-    // look for next newline character
-    // assign block number after delimiter to next_directory_block_num
+    int next_directory_block_num = 
+      search_directory_for_name(next_name, current_directory_block_num);
     
     return get_path_block_num(ptr_next_separator, next_directory_block_num);
-  }
+  } // End if
+  
+  // This is the last file/directory 
   else {
-    // If this is the last directory, then return this block number
-    return current_directory_block_num;
-  }
-} // end get_directory_block_num
+    strncpy(next_name, path + 1, strlen(path));
+    next_name[strlen(path)] = '\0';
+    
+    // Search for the file/directory in the current directory block
+    return search_directory_for_name(next_name, current_directory_block_num);
+  } // End else
+} // End get_directory_block_num
