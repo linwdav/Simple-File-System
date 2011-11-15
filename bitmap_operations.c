@@ -21,7 +21,7 @@ int requestNextFreeBlock ()
   // remainder = # of bits in the last bitmap block
   int remainder = num_blocks - (num_whole_blocks * BITS_IN_BLOCK);
 
-  // Loop through each full bitmap block
+  // Loop through each whole bitmap block
   int i;
   for (i = FREE_LIST_BITMAP_START; i < num_whole_blocks + FREE_LIST_BITMAP_START; i++) {
     // Read in bitmap block
@@ -32,12 +32,13 @@ int requestNextFreeBlock ()
     // Loop through each byte in the block
     int j;
     for (j = 0; j < BLOCKSIZE; j++) {
-      // If the byte is not 11111111 then it has a 0 bit somewhere in the byte
+      // If the byte is not 1111 1111 then it has a 0 bit somewhere within the byte
       if (buffer[j] != 0xFF) {
         int bit_position = 0;
         int k;
         // Examine each bit in the byte for the 0
         for (k = BITS_IN_BYTE - 1; k >= 0; k--) {
+          // Store the bit
           int bit = (buffer[j]>>k)&1;
           if (bit == 0) {
             // Return the final block number
@@ -52,7 +53,7 @@ int requestNextFreeBlock ()
   }
 
   // If execution gets to this point, then we could not find a free block in any
-  // of the whole blocks. Check the last partial bitmap block.
+  // of the whole blocks. Check the last partially-filled bitmap block.
   if (remainder > 0) {
     // Read in bitmap block
     if (read_block (i, buffer) < 0) {
@@ -63,12 +64,13 @@ int requestNextFreeBlock ()
     // Loop through each byte in the block
     int j;
     for (j = 0; j < bytes_to_check; j++) {
-      // If the byte is not 11111111 then it has a 0 bit somewhere in the byte
+      // If the byte is not 1111 1111 then it has a 0 bit somewhere in the byte
       if (buffer[j] != 0xFF) {
         int bit_position = 0;
         int k;
         // Examine each bit in the byte for the 0
         for (k = BITS_IN_BYTE - 1; k >= 0; k--) {
+          // Store the bit
           int bit = (buffer[j]>>k)&1;
           if (bit == 0) {
             // Return the final block number
@@ -121,7 +123,7 @@ int setBlockInBitmapToStatus (int status, int blockNumber)
   // Find the index of the bit to set within the block
   int bitIndexWithinBlock = blockToFree % BITS_IN_BLOCK;
 
-  // Find which byte the bit is in
+  // Find the index of the byte within the block
   int byteIndex = bitIndexWithinBlock / BITS_IN_BYTE;
 
   // Find the index of the bit within the byte. For example, the bit at index
