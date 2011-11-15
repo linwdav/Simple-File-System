@@ -51,7 +51,7 @@ void parseRemoveNums(const char * path, int blockNums[2]) {
   char buffer[1024];
 
   while (token != NULL) {
-    if (findNextBlockNum(blockNums, directory) < 0) {
+    if (findNextBlockNum(directory, blockNums) < 0) {
 	  return;
 	}
 
@@ -74,7 +74,7 @@ void parseRemoveNums(const char * path, int blockNums[2]) {
 	}
 
 	if (read_block(blockNums[1], buffer) < 0) {
-	  printf("Error reading block #%d\n", blockNum);
+	  printf("Error reading block #%d\n", blockNums[1]);
       exit(1);
 	}
 
@@ -94,7 +94,7 @@ void parseRemoveNums(const char * path, int blockNums[2]) {
 int findNextBlockNum(char *filename, int blockNums[2]) {
 	char buffer[1024];
 	if (read_block(blockNums[0], buffer) < 0) {
-	  printf("Error reading block #%d\n", parentBlock);
+	  printf("Error reading block #%d\n", blockNums[0]);
       exit(1);
 	}
 
@@ -132,7 +132,7 @@ int findNextBlockNum(char *filename, int blockNums[2]) {
 	blockNums[1] = -1;
 
 	if (nextBlock != 0) {
-	  blockNums[0] = nextBlock
+	  blockNums[0] = nextBlock;
 	  findNextBlockNum(filename, blockNums);
 	}
 
