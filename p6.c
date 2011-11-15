@@ -10,15 +10,87 @@
 #include <string.h>
 #include "block.h"
 
-#define NUM_SYSTEM_BLOCKS 2
-#define ROOT_BLOCK 0
+// File System Blocks
+#define NUM_SYSTEM_BLOCKS       2
+#define ROOT_BLOCK              0
 #define FREE_LIST_BITMAP_PARAMS 1
-#define FREE_LIST_BITMAP_START 2
-#define HEADER_SIZE 8
-#define BITS_IN_BLOCK (8 * BLOCKSIZE)
+#define FREE_LIST_BITMAP_START  2
 #define BITS_IN_BYTE 8
 
+#define MAX_FILE_SIZE           (2 * 1048576) // 2MB
+#define MAX_FILENAME_LENGTH     200
+#define MAX_PATH_LENGTH         1024
+#define MAX_OPEN_FILES          10
+
+#define HEADER_SIZE             8
+#define BITS_IN_BLOCK           (8 * BLOCKSIZE)
+#define PATH_SEPARATOR          '/'
+
+// Number of blocks on disk - value returned via dev_open()
 int num_blocks;
+
+// Array of open files
+static int open_files[MAX_OPEN_FILES];
+static int last_open_file_index = 0;
+
+/*
+ * Requests the next free block from the free block list.
+ */
+int get_next_free_block() {
+  // TO DO
+  static int next_free_block = 50;
+  next_free_block += 100;
+  return next_free_block;
+}
+
+/*
+ * given a list of block numbers, free them in the free block list
+ */
+int free_blocks(int n, int *listOfBlocks) {
+  // TO DO
+  return 0;
+}
+
+/*
+ * Sets a given block as either free (status = 0) or taken (status = 1)
+ * within the free block bitmap 
+ */
+int set_block_in_bitmap_to_status(int status, int blockNumber) {
+  // TO DO
+  return 0;
+}
+
+/* 
+ * Returns the block number for a given directory
+ */
+int get_directory_block_num (char * path, int current_directory_block_num) {
+  // Get contents of directory at beginning of path
+  char buffer[BLOCKSIZE];
+  
+  // If an invalid block number, return -1
+  if (read_block(current_directory_block_num, buffer) < 0) {
+    return -1;
+  }
+    
+  // Search for next separator
+  char *ptr_next_separator = strchr(path + 1, PATH_SEPARATOR);
+  
+  if (ptr_next_separator) {
+    int next_directory_block_num;
+    
+    // split out next directory name
+    // search through buffer for directory name
+    // look for delimiter
+    // look for next newline character
+    // assign block number after delimiter to next_directory_block_num
+    
+    return get_directory_block_num(ptr_next_separator, next_directory_block_num);
+  }
+  else {
+    // If this is the last directory, then return this block number
+    return current_directory_block_num;
+  }
+} // end get_directory_block_num
 
 /* open an exisiting file for reading or writing */
 int my_open (const char * path)
@@ -30,9 +102,34 @@ int my_open (const char * path)
 /* open a new file for writing only */
 int my_creat (const char * path)
 {
-  printf ("my_creat (%s) not implemented\n", path);
-  return -1;
-}
+  int fd;
+  
+  // Get next free block
+  int file_block_num = get_next_free_block();
+  
+  // Split path into directory path and filename
+  char *separator = strrchr(path, PATH_SEPARATOR);
+  char filename_buffer[MAX_FILENAME_LENGTH];
+  char path_buffer[MAX_PATH_LENGTH];
+  
+  strcpy(filename_buffer, separator + 1);
+  strncpy(path_buffer, path, separator - path);
+  path_buffer[separator - path] = '\0';
+
+  // Get directory file block number
+  int directory_block_num = get_directory_block_num(path_buffer, ROOT_BLOCK);
+  
+  // If directory does not exist, then set return value to -1 (error)
+  
+  // Append filename to directory file 
+  // Must search directory to ensure doesn't file doesn't already exist
+  
+  // Add to open file array
+  
+  // Write file header information
+  
+  return fd;
+} // end my_creat
 
 /* sequentially read from a file */
 int my_read (int fd, void * buf, int count)
