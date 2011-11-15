@@ -101,8 +101,9 @@ int my_mkdir (const char * path)
 int my_rmdir (const char * path)
 {
   int blockNums[2];
+  char * filename;
 
-  parseRemoveNums(path, blockNums);
+  filename = parseRemoveNums(path, blockNums, 'r');
   if (blockNums[1] == -1) {
     return -1;
   }
@@ -114,6 +115,7 @@ int my_rmdir (const char * path)
   deleteDirectoryRecursively(blockNums[1]);
 
   // Remove entry from parent directory.
+  removeEntry(filename, blockNums[0]);
 
   return 0;
 }
