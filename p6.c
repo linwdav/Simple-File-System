@@ -255,6 +255,7 @@ void my_mkfs ()
   else {
     printf("File system already exists.\n");
   }
+
 } // End my_mkfs
 
 /* Return the block number to the next free block in free block list. */
@@ -341,48 +342,57 @@ int requestNextFreeBlock ()
 int freeBlocks (int n, int *listOfBlocks)
 {
   int i;
+  // Set each block to 0
   for (i = 0; i < n; i++) {
-    // Get the bit to free
-    int blockToFree = listOfBlocks[i];
-
-    // Find the bitmap block that contains the bit to free
-    int bitmapBlock = blockToFree / BITS_IN_BLOCK;
-
-    // Buffer to read blocks from file system on disk
-    unsigned char buffer[BLOCKSIZE];
-
-    // Read in the bitmap block that contains the bit we want to find
-    if (read_block (FREE_LIST_BITMAP_START + bitmapBlock, buffer) < 0) {
-      printf("Error reading block #%d\n", i);
-      exit(1);
-    }
-
-    // Find the index of the bit to flip within the block
-    int bitIndexWithinBlock = blockToFree % BITS_IN_BLOCK;
-
-    // Find which byte the bit is in
-    int byteIndex = bitIndexWithinBlock / BITS_IN_BYTE;
-
-    // Find the index of the bit within the byte. For example, the bit at index
-    // 6 for 1011 1111 is 0.
-    int bitIndexWithinByte = blockToFree % BITS_IN_BYTE;
-
-    // Actual index is from right to left. For example, flipping the bit at index 7
-    // for 1111 1111 results in 0111 1111.
-    int actualIndex = BITS_IN_BYTE - bitIndexWithinByte - 1;
-
-    // Flip the bit to 0
-    buffer[byteIndex] = buffer[byteIndex]&=~(1<<(actualIndex));
-
-    // Write buffer back to disk
-    write_block(FREE_LIST_BITMAP_START + bitmapBlock, buffer);
+    setBlockInBitmapToStatus(0, listOfBlocks[i]);
   }
-  return 0;
+  return 1;
 }
 
 /* Set a bit in bitmap and return success or failure. */
 int setBlockInBitmapToStatus (int status, int blockNumber)
 {
-  printf("setBlockInBitmapToStatus\n");
-  return 0;
+  // Get the bit to set
+  int blockToFree = blockNumber;
+
+  // Find the bitmap block that contains the bit to set
+  int bitmapBlock = blockToFree / BITS_IN_BLOCK;
+
+  // Buffer to read block from file system on disk
+  unsigned char buffer[BLOCKSIZE];
+
+  // Read in the bitmap block that contains the bit we want to find
+  if (read_block (FREE_LIST_BITMAP_START + bitmapBlock, buffer) < 0) {
+    printf("Error reading block #%d\n", FREE_LIST_BITMAP_START + bitmapBlock);
+    exit(1);
+  }
+
+  // Find the index of the bit to set within the block
+  int bitIndexWithinBlock = blockToFree % BITS_IN_BLOCK;
+
+  // Find which byte the bit is in
+  int byteIndex = bitIndexWithinBlock / BITS_IN_BYTE;
+
+  // Find the index of the bit within the byte. For example, the bit at index
+  // 6 for 1011 1111 is 0.
+  int bitIndexWithinByte = blockToFree % BITS_IN_BYTE;
+
+  // Actual index is from right to left. For example, flipping the bit at index 7
+  // for 1111 1111 results in 0111 1111.
+  int actualIndex = BITS_IN_BYTE - bitIndexWithinByte - 1;
+
+  // Set the bit
+  if (status == 0) {
+    // Set to 0
+    buffer[byteIndex] = buffer[byteIndex]&=~(1<<actualIndex);
+  }
+  else if (status == 1) {
+    // Set to 1
+    buffer[byteIndex] = buffer[byteIndex]|=(1<<actualIndex);
+  }
+
+  // Write buffer back to disk
+  write_block(FREE_LIST_BITMAP_START + bitmapBlock, buffer);
+
+  return 1;
 }
