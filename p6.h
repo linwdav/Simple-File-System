@@ -11,7 +11,7 @@
 #define BITS_IN_BYTE 8
 
 #define MAX_FILE_SIZE           (2 * 1048576) // 2MB
-#define MAX_FILE_NAME_LENGTH     200
+#define MAX_FILE_NAME_LENGTH    200
 #define MAX_PATH_LENGTH         1024
 #define MAX_OPEN_FILES          10
 
