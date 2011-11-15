@@ -41,6 +41,11 @@ int main (int argc, char ** argv)
     printf ("second or subsequent test\n");
     first_test = 0;
   }
+  
+  /** INSERTED FOR TESTING **/
+  fd0 = test_file ("/foo/bar0", buffer0, sizeof (buffer0), max_size);
+  /** REMOVE **/
+  
   if (my_rmdir ("/foo") < 0) {
     if (first_test) {
       printf ("unable to rmdir /foo\n");

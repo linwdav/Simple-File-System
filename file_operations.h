@@ -8,4 +8,6 @@
 #include "p6.h"
 #include "block.h"
 
+int get_path_block_num (char * path, int current_directory_block_num);
+
 #endif
