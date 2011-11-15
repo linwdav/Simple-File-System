@@ -14,6 +14,9 @@ int get_path_block_num (char * path, int current_directory_block_num) {
     int next_directory_block_num;
     
     // split out next directory name
+    char next_directory[MAX_FILE_NAME_LENGTH];
+    strncpy(next_directory, path + 1, ptr_next_separator - path + 1);
+    
     // search through buffer for directory name
     
     // If an invalid block number, return -1
@@ -21,11 +24,13 @@ int get_path_block_num (char * path, int current_directory_block_num) {
       return -1;
     }
     
+    
+    
     // look for delimiter
     // look for next newline character
     // assign block number after delimiter to next_directory_block_num
     
-    return get_directory_block_num(ptr_next_separator, next_directory_block_num);
+    return get_path_block_num(ptr_next_separator, next_directory_block_num);
   }
   else {
     // If this is the last directory, then return this block number
