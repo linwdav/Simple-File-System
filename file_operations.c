@@ -102,6 +102,7 @@ int write_to_block(const void * buf, int block_num, int pointer, int amount) {
 
   char * buffer_ptr = buffer + 1;
   char * buf_ptr = (char *)buf;
+
   int next_block;
   memcpy(&next_block, buffer_ptr, sizeof(next_block));
 
@@ -124,6 +125,9 @@ int write_to_block(const void * buf, int block_num, int pointer, int amount) {
 	  if (initialize_header(next_block, 'f') < 0) {
 		return -1;
 	  }
+
+	  buffer_ptr = buffer + 1;
+	  memcpy(buffer_ptr, &next_block, sizeof(next_block));
     }
 
 	amount_written_to_block = BLOCKSIZE - pointer;
@@ -151,9 +155,9 @@ int write_to_block(const void * buf, int block_num, int pointer, int amount) {
 	bytes_allocated += amount_written_to_block;
   }
 
-
   buffer_ptr = buffer + 1 + sizeof(next_block);
   memcpy(buffer_ptr, &bytes_allocated, sizeof(bytes_allocated));
+
   // Regardless of if there is more to write, write back this block because it is either full or
   // done writing.
   if (write_block(block_num, buffer) < 0) {
@@ -166,6 +170,8 @@ int write_to_block(const void * buf, int block_num, int pointer, int amount) {
   buf = buf + amount_written_to_block;
   int amount_to_write;
   int current_block = next_block;
+
+  // loop through for the necessary amount of blocks to hold the data.
   for (i = 0; i < extraBlocks; i++) {
 	if (read_block(current_block, buffer) < 0) {
 	  printf("Error reading to block #%d\n", next_block);
@@ -190,6 +196,7 @@ int write_to_block(const void * buf, int block_num, int pointer, int amount) {
 	buffer_ptr = buffer + HEADER_SIZE;
 	strncpy(buffer_ptr, buf_ptr, amount_to_write);
 
+	// The amount written to the block exceeded the amount previously allocated on block.
 	if (bytes_allocated < (HEADER_SIZE + amount_to_write)) {
 		bytes_allocated = HEADER_SIZE + amount_to_write;
 
@@ -232,17 +239,21 @@ int initialize_header(int block_num, char flag) {
   char buffer[BLOCKSIZE];
   char * buffer_ptr;
 
+  // Read in the new block.
   if (read_block(block_num, buffer) < 0) {
 	printf("Error reading to block #%d\n", block_num);
 	return -1;
   }
 
+  // Set first byte
   buffer[0] = flag;
   buffer_ptr = buffer + 1;
 
+  // No next block yet.
   int next_block = 0;
   memcpy(buffer_ptr, &next_block, sizeof(next_block));
 
+  // Default bytes allocated is always the size of the header.
   short bytes_allocated = HEADER_SIZE;
   memcpy(buffer_ptr + sizeof(next_block), &bytes_allocated, sizeof(bytes_allocated));
 
