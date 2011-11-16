@@ -28,6 +28,7 @@ int parseAndCreateDirectory(const char * path) {
 	  if ((newBlockNum = requestNextFreeBlock()) < 0) {
 		return -1;
 	  }
+	  setBlockInBitmapToStatus(1, newBlockNum);
 
 	  char newBlock[BLOCKSIZE];
 
@@ -413,6 +414,7 @@ int addEntry(char directory[FILENAME_SIZE], int newBlock, int parentBlock) {
 		  if ((newNextBlock = requestNextFreeBlock()) < 0) {
 			return -1;
 		  }
+		  setBlockInBitmapToStatus(1, newNextBlock);
 
 		  char newDirectoryBlock[BLOCKSIZE];
 

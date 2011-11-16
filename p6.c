@@ -70,8 +70,23 @@ int my_read (int fd, void * buf, int count)
 /* sequentially write to a file */
 int my_write (int fd, const void * buf, int count)
 {
-  printf ("my_write (%d, %x, %d) not implemented\n", fd, *((unsigned int *)buf), count);
-  return -1;
+  int block_num = open_files[fd];
+  int pointer = open_files_current_position[fd];
+  int num_blocks = pointer / BLOCKSIZE;
+  int remainder = pointer % BLOCKSIZE;
+  
+  // The block in which the pointer is pointing.
+  if ((block_num = find_block_to_write_to(block_num, num_blocks)) < 0) {
+	return -1;
+  }
+
+  if (write_to_block(buf, block_num, remainder, count) < 0) {
+	return -1;
+  }
+
+  open_files_current_position[fd] += count;
+
+  return 0;
 }
 
 int my_close (int fd)
