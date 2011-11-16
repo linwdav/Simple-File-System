@@ -95,8 +95,11 @@ int my_rename (const char * old, const char * new)
 /* only works if all but the last component of the path already exists */
 int my_mkdir (const char * path)
 {
-  printf ("my_mkdir (%s) not implemented\n", path);
-  return -1;
+  if (parseAndCreateDirectory(path) < 0) {
+	return -1;
+  }
+
+  return 0;
 }
 
 int my_rmdir (const char * path)
@@ -116,7 +119,9 @@ int my_rmdir (const char * path)
   deleteDirectoryRecursively(blockNums[1]);
 
   // Remove entry from parent directory.
-  removeEntry(filename, blockNums[0]);
+  if (removeEntry(filename, blockNums[0]) < 0) {
+	return -1;
+  }
 
   return 0;
 }
