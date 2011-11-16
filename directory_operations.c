@@ -339,6 +339,12 @@ char determineFileType(int blockNum) {
   return buffer[0];
 }
 
+/* Removes an entry from a directory.  When it removes the entry it moves the rest of
+ * the data in the directory block up so that the free space in the directory block
+ * is all at the end.
+ * filename - The name of the directory/file to remove.
+ * blockNum - The block number of the directory that has the entry.
+ */
 int removeEntry(char * filename, int blockNum) {
   char buffer[BLOCKSIZE];
 
@@ -379,6 +385,11 @@ int removeEntry(char * filename, int blockNum) {
   return -1;
 }
 
+/* Adds an entry to a directory.
+ * directory - the name of the file/directory to be placed in the entry
+ * newBlock - the block number associated with the directory.
+ * parentBlock - the directory to place the entry in.
+ */
 int addEntry(char directory[FILENAME_SIZE], int newBlock, int parentBlock) {
 	char buffer[BLOCKSIZE];
 
@@ -470,6 +481,12 @@ int addEntry(char directory[FILENAME_SIZE], int newBlock, int parentBlock) {
 	}
 }
 
+/* Used when parsing a path.  Iterates through a directory to find the block number of the next
+ * step in the path.  Ex.  /foo/bar - You can search for foo in the root directory, or for bar
+ * within the foo directory (as long as you know the beginning block number of the foo directory)
+ * directory - The name of the file/directory you are searching for.
+ * parentDirectory - The block number of the directory you are searching through.
+ */
 int updateParentDirectoryNum(char directory[FILENAME_SIZE], int parentDirectory) {
   char buffer[BLOCKSIZE];
 
