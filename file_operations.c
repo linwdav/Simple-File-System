@@ -42,7 +42,7 @@ int add_entry_to_directory(unsigned int directory_block_num, char * entry_name, 
       strcpy(buffer_ptr, entry_name);
       
       // Add entry block num to buffer
-      buffer_ptr += BYTES_IN_INT;
+      buffer_ptr += MAX_FILE_NAME_LENGTH;
       memcpy(buffer_ptr, &entry_block_num, BYTES_IN_INT);
       
       // Update bytes_allocated field
@@ -52,7 +52,7 @@ int add_entry_to_directory(unsigned int directory_block_num, char * entry_name, 
       memcpy(buffer_ptr, &bytes_allocated, BYTES_IN_SHORT);
       
       write_block(last_block, buffer);
-    }
+    } // End if
     
 
     // otherwise, create a new directory block and update the header and free block 

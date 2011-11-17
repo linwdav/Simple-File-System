@@ -19,4 +19,7 @@ int find_block_to_write_to(int start_block, int num_blocks);
 int write_to_block (const void * buf, int block_num, int pointer, int amount);
 int initialize_header(int block_num, char flag);
 
+extern unsigned int open_files[];
+extern unsigned int open_files_current_position[];
+
 #endif

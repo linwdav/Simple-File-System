@@ -11,5 +11,8 @@
 void test_file_operations_setup();
 void test_get_path_block_num();
 void test_search_directory_block_for_name();
+void test_my_creat();
+void test_my_open();
+void test_my_close();
 
 #endif

@@ -17,8 +17,8 @@
 int num_blocks;
 
 // Array of open files
-static int open_files[MAX_OPEN_FILES];
-static int open_files_current_position[MAX_OPEN_FILES];
+unsigned int open_files[MAX_OPEN_FILES];
+unsigned int open_files_current_position[MAX_OPEN_FILES];
 
 /* open an existing file for reading or writing */
 int my_open (const char * path)
