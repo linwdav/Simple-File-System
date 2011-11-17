@@ -97,7 +97,7 @@ void test_file_operations_setup() {
 void test_get_path_block_num() {
   
   if (get_path_block_num("/foo2/hello.txt") < 0) {
-    printf("\nTest Failed.\n");
+    printf("\ntest_get_path_block_num FAILED.\n");
   }
   else if (get_path_block_num("/foo2/hello.txt") == FILE_BLOCK_1){
     printf("\ntest_get_path_block_num PASSED.\n");

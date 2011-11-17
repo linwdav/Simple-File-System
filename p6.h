@@ -13,6 +13,7 @@
 #define MAX_FILE_NAME_LENGTH    200
 #define MAX_PATH_LENGTH         1024
 #define MAX_OPEN_FILES          10
+#define MAX_ENTRIES_PER_DIRECTORY ((BLOCKSIZE - 8)/(MAX_FILE_NAME_LENGTH + BYTES_IN_INT))
 
 #define HEADER_SIZE             8
 #define BYTES_IN_SHORT          2

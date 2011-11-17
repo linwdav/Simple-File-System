@@ -1,5 +1,95 @@
 #include "file_operations.h"
 
+int get_file_block_and_header_information(char * buffer, unsigned int file_block_num, unsigned int *next_block, unsigned short * bytes_allocated) {
+   // If an invalid block number, return -1
+   if (read_block(file_block_num, buffer) < 0) {
+     return -1;
+   }
+    
+   memcpy(next_block, buffer + 1, BYTES_IN_INT);
+   memcpy(bytes_allocated, buffer + 1 + BYTES_IN_INT, BYTES_IN_SHORT);
+}
+
+int add_entry_to_directory(unsigned int directory_block_num, char * entry_name, unsigned int entry_block_num) {
+  
+  // Check directory to ensure that the entry name does not already exist (-1 = not found)
+  if (search_directory_block_for_name(entry_name, directory_block_num) == -1) {
+    unsigned int last_block = directory_block_num;
+    
+    char buffer[BLOCKSIZE];
+    unsigned int next_block = -1;
+    unsigned short bytes_allocated;
+    
+    // Go to last block of the directory
+    while(next_block != 0) {
+      get_file_block_and_header_information(buffer, last_block, &next_block, &bytes_allocated);
+      if (next_block != 0) {
+        last_block = next_block;
+      }
+    }
+    
+    // Calculate the number of existing entries in the last directory block
+    if ((bytes_allocated - HEADER_SIZE) % FILE_NUM_PAIRINGS_SIZE != 0) {
+      return -1;
+    }
+    int num_entries = (bytes_allocated - HEADER_SIZE) / FILE_NUM_PAIRINGS_SIZE;
+    
+    // If there's space for another entry, then add it to the end
+    if (num_entries < MAX_ENTRIES_PER_DIRECTORY) {
+      
+      char *buffer_ptr = buffer + HEADER_SIZE + (FILE_NUM_PAIRINGS_SIZE * num_entries);
+      // Add entry name to buffer
+      strcpy(buffer_ptr, entry_name);
+      
+      // Add entry block num to buffer
+      buffer_ptr += BYTES_IN_INT;
+      memcpy(buffer_ptr, &entry_block_num, BYTES_IN_INT);
+      
+      // Update bytes_allocated field
+      bytes_allocated += FILE_NUM_PAIRINGS_SIZE;
+      buffer_ptr = buffer;
+      buffer_ptr += 1 + BYTES_IN_INT;
+      memcpy(buffer_ptr, &bytes_allocated, BYTES_IN_SHORT);
+      
+      write_block(last_block, buffer);
+    }
+    
+
+    // otherwise, create a new directory block and update the header and free block 
+    // list accordingly.   
+    else {
+      // Get next free block
+      int new_directory_block = requestNextFreeBlock();
+      
+      // Update the next_block in the last block to point to the new block
+      char * buffer_ptr = buffer;
+      memcpy(++buffer_ptr, &new_directory_block, BYTES_IN_INT);
+      write_block(last_block, buffer);
+      
+      // Create new directory block
+      memset(buffer, 0, BLOCKSIZE);
+      populate_file_header(buffer, ROOT_BLOCK, HEADER_SIZE + FILE_NUM_PAIRINGS_SIZE, 'd');
+
+      // Copy in name and block number for entry
+      buffer_ptr += HEADER_SIZE;
+      strcpy(buffer_ptr, entry_name);
+      
+      buffer_ptr += BYTES_IN_INT;
+      memcpy(buffer_ptr, &entry_block_num, BYTES_IN_INT);
+
+      write_block(new_directory_block, buffer);
+      
+      // Flip bit in freeblock list
+      setBlockInBitmapToStatus (1, new_directory_block);
+    } 
+    return 0;
+  }
+  // If the file exists, return -1 (error)
+  else {
+    return -1;
+  }
+} // end add_entry_to_directory
+
 /* Populates a buffer with the given file header information */
 void populate_file_header(char * buffer, unsigned int next_block, unsigned short bytes_allocated, char flag) {
   memset(buffer, 0, BLOCKSIZE);
@@ -21,37 +111,31 @@ void populate_file_header(char * buffer, unsigned int next_block, unsigned short
  * block in the directory or return -1 if nothing is found and the entire
  * directory has been searched.
  */
-int search_directory_block_for_name(char * name, int directory_block_num) {
+int search_directory_block_for_name(char * name, unsigned int directory_block_num) {
    // Return value
    int block_num_of_name;
    
    // Get contents of directory
    char buffer[BLOCKSIZE];
    
-   // If an invalid block number, return -1
-   if (read_block(directory_block_num, buffer) < 0) {
-     return -1;
-   }
-   
    // Directory information
-   unsigned short allocated_bytes;
+   unsigned short bytes_allocated;
    unsigned int next_block;
-   
-   char * buffer_ptr = buffer;
   
    // Get directory information
-   memcpy(&next_block, buffer_ptr + 1, BYTES_IN_INT);
-   memcpy(&allocated_bytes, buffer_ptr + 1 + BYTES_IN_INT, BYTES_IN_SHORT);
+   get_file_block_and_header_information(buffer, directory_block_num, &next_block, &bytes_allocated);
    
    // Ensure that there are file listings in this block
-   if ((allocated_bytes - HEADER_SIZE) % FILE_NUM_PAIRINGS_SIZE != 0) {
+   if ((bytes_allocated - HEADER_SIZE) % FILE_NUM_PAIRINGS_SIZE != 0) {
      return -1;
    }
    // Determine how many entries are in this directory block. 
-   int num_iterations = (allocated_bytes - HEADER_SIZE) / FILE_NUM_PAIRINGS_SIZE;
+   int num_iterations = (bytes_allocated - HEADER_SIZE) / FILE_NUM_PAIRINGS_SIZE;
       
-   int i;
+   char *buffer_ptr = buffer;
    buffer_ptr = buffer + HEADER_SIZE;
+   
+   int i;
    for (i = 0; i < num_iterations; i++) {
      
      // Look at each entry.  If it matches, then return the block number
@@ -99,7 +183,7 @@ int get_path_block_num (const char * path) {
 /* 
  * Returns the block number for a given directory.  Example: /foo/bar/hello.txt
  */
-int get_path_block_num_recursive (char * path, int current_directory_block_num) {
+int get_path_block_num_recursive (char * path, unsigned int current_directory_block_num) {
   
   // Search for next separator
   char *ptr_next_separator = strchr(path, PATH_SEPARATOR);

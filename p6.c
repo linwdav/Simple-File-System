@@ -49,7 +49,7 @@ int my_creat (const char * path)
   int fd;
   
   // Get next free block
-  int file_block_num = requestNextFreeBlock();
+  unsigned int file_block_num = requestNextFreeBlock();
   
   // Split path into directory path and filename
   char *separator = strrchr(path, PATH_SEPARATOR);
@@ -61,7 +61,7 @@ int my_creat (const char * path)
   path_buffer[separator - path] = '\0';
 
   // Get directory file block number
-  int directory_block_num = get_path_block_num(path_buffer);
+  unsigned int directory_block_num = get_path_block_num(path_buffer);
   
   // If directory does not exist, then set return value to -1 (error)
   if (directory_block_num < 0) {
@@ -70,6 +70,9 @@ int my_creat (const char * path)
   
   // Append filename to directory file 
   // Must search directory to ensure doesn't file doesn't already exist
+  if (add_entry_to_directory(directory_block_num, filename_buffer, file_block_num) < 0) {
+    return -1;
+  }
   
   // Add to open file array
   fd = my_open(path);
