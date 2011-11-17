@@ -13,7 +13,7 @@ int get_file_block_and_header_information(char * buffer, unsigned int file_block
 int add_entry_to_directory(unsigned int directory_block_num, char * entry_name, unsigned int entry_block_num) {
   
   // Check directory to ensure that the entry name does not already exist (-1 = not found)
-  if (search_directory_block_for_name(entry_name, directory_block_num) == -1) {
+  if (search_directory_block_for_name(entry_name, directory_block_num) == 0) {
     unsigned int last_block = directory_block_num;
     
     char buffer[BLOCKSIZE];
@@ -86,6 +86,7 @@ int add_entry_to_directory(unsigned int directory_block_num, char * entry_name, 
   }
   // If the file exists, return -1 (error)
   else {
+    printf("File: %s already exists in the directory\n", entry_name);
     return -1;
   }
 } // end add_entry_to_directory
@@ -111,7 +112,7 @@ void populate_file_header(char * buffer, unsigned int next_block, unsigned short
  * block in the directory or return -1 if nothing is found and the entire
  * directory has been searched.
  */
-int search_directory_block_for_name(char * name, unsigned int directory_block_num) {
+unsigned int search_directory_block_for_name(char * name, unsigned int directory_block_num) {
    // Return value
    int block_num_of_name;
    
@@ -127,7 +128,7 @@ int search_directory_block_for_name(char * name, unsigned int directory_block_nu
    
    // Ensure that there are file listings in this block
    if ((bytes_allocated - HEADER_SIZE) % FILE_NUM_PAIRINGS_SIZE != 0) {
-     return -1;
+     return 0;
    }
    // Determine how many entries are in this directory block. 
    int num_iterations = (bytes_allocated - HEADER_SIZE) / FILE_NUM_PAIRINGS_SIZE;
@@ -153,7 +154,7 @@ int search_directory_block_for_name(char * name, unsigned int directory_block_nu
    }
    // If this is the last block, then the entry is not in this directory.
    else {
-     return -1;
+     return 0;
    }
 } // end search_directory_for_name
 

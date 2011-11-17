@@ -126,25 +126,26 @@ void test_get_path_block_num() {
 void test_my_creat() {
   char path[] = "/foo2/hello2.txt";
   
-  int fd = my_creat(path);
-  
-  // Check to ensure file is open
-  if (fd != 0) {
-    printf("\ntest_my_creat FAILED.  Incorrect file descriptor.\n");
+  // Check if file exists already
+  unsigned int directory_block_num = get_path_block_num("/foo2/");
+  unsigned int filename_found = search_directory_block_for_name("hello2.txt", directory_block_num);
+  if ( filename_found == 0) {
+    printf("test_my_creat: file does not exist yet.\n");
   }
   else {
-    printf("\ntest_my_creat: file block returned - %i\n", open_files[fd]);
+    printf("test_my_creat: file already exists.\n");
   }
+  
+  int fd = my_creat(path);
     
   // Check to ensure that the filename has been added to it's directory
-  unsigned int directory_block_num = get_path_block_num("/foo2/");
-  if (search_directory_block_for_name("hello2.txt", directory_block_num) < 0) {
+  unsigned int block_found = search_directory_block_for_name("hello2.txt", directory_block_num);
+  if ( block_found == 0) {
     printf("test_my_creat FAILED.  File not added to directory.\n");
   }
   else {
-    printf("test_my_creat: file added to directory.\n");
+    printf("test_my_creat: file is in directory.\n");
   }
-  
   
   // Check file header information
   char buffer[BLOCKSIZE];
@@ -159,6 +160,13 @@ void test_my_creat() {
     printf("test_my_creat: file not created.\n");
   }
   
+  // Check to ensure file is open
+  if (fd != 0) {
+    printf("\ntest_my_creat FAILED.  Incorrect file descriptor.\n");
+  }
+  else {
+    printf("\ntest_my_creat: file block returned - %i\n", open_files[fd]);
+  }
   my_close(fd);
 }
 

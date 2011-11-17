@@ -12,7 +12,7 @@
 int get_file_block_and_header_information(char * buffer, unsigned int file_block_num, unsigned int *next_block, unsigned short * bytes_allocated);
 int add_entry_to_directory(unsigned int directory_block_num, char * entry_name, unsigned int entry_block_num);
 void populate_file_header(char * buffer, unsigned int next_block, unsigned short bytes_allocated, char flag);
-int search_directory_block_for_name(char * name, unsigned int directory_block_num);
+unsigned int search_directory_block_for_name(char * name, unsigned int directory_block_num);
 int get_path_block_num (const char * path);
 int get_path_block_num_recursive (char * path, unsigned int current_directory_block_num);
 int find_block_to_write_to(int start_block, int num_blocks);
