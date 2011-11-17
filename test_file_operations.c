@@ -109,7 +109,7 @@ void test_file_operations_setup() {
 
 
 void test_search_directory_block_for_name() {
-  
+  // OPTIONAL.  Already tested via gdb
 }
 
 
@@ -167,6 +167,10 @@ void test_my_creat() {
   else {
     printf("\ntest_my_creat: file block returned - %i\n", open_files[fd]);
   }
+
+  // reset free block list bit
+  setBlockInBitmapToStatus (0, open_files[fd]);
+  
   my_close(fd);
 }
 
