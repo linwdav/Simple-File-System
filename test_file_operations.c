@@ -18,6 +18,11 @@ int size_of_disk;
  */
 void test_file_operations_setup() {
   size_of_disk = dev_open();
+  
+  if (size_of_disk != 250000) {
+    printf("\ntest_file_operations_setup FAIL.  Size of disk must be 250,000 blocks.\n");
+  }
+  
   my_mkfs();
   
   // Zero out buffers
@@ -26,7 +31,7 @@ void test_file_operations_setup() {
   char name[MAX_FILE_NAME_LENGTH];
   
   /** ROOT BLOCK **/  
-  int bytes_allocated = HEADER_SIZE + 2 * FILE_NUM_PAIRINGS_SIZE;
+  unsigned short bytes_allocated = HEADER_SIZE + 2 * FILE_NUM_PAIRINGS_SIZE;
   
   populate_file_header(buffer, ROOT_BLOCK, bytes_allocated, 'd');
   
@@ -36,7 +41,7 @@ void test_file_operations_setup() {
   buffer_ptr += HEADER_SIZE;
   memcpy(buffer_ptr, name, MAX_FILE_NAME_LENGTH);
   
-  int block_num = DIRECTORY_BLOCK_0;
+  unsigned int block_num = DIRECTORY_BLOCK_0;
   buffer_ptr += MAX_FILE_NAME_LENGTH;
   memcpy(buffer_ptr, &block_num, BYTES_IN_INT);
   

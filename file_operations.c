@@ -1,7 +1,7 @@
 #include "file_operations.h"
 
 /* Populates a buffer with the given file header information */
-void populate_file_header(char * buffer, int next_block, int bytes_allocated, char flag) {
+void populate_file_header(char * buffer, unsigned int next_block, unsigned short bytes_allocated, char flag) {
   memset(buffer, 0, BLOCKSIZE);
   char *buffer_ptr = buffer;
   
