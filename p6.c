@@ -64,13 +64,23 @@ int my_creat (const char * path)
   int directory_block_num = get_path_block_num(path_buffer);
   
   // If directory does not exist, then set return value to -1 (error)
+  if (directory_block_num < 0) {
+    return -1;
+  }
   
   // Append filename to directory file 
   // Must search directory to ensure doesn't file doesn't already exist
   
   // Add to open file array
+  fd = my_open(path);
   
   // Write file header information
+  char header_buffer[BLOCKSIZE];
+  populate_file_header(header_buffer, ROOT_BLOCK, HEADER_SIZE, 'f');
+  write_block(file_block_num, header_buffer);
+  
+  // Flip bit in free block list
+  setBlockInBitmapToStatus (1, file_block_num);
   
   return fd;
 } // end my_creat

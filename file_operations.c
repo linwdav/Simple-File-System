@@ -1,5 +1,26 @@
 #include "file_operations.h"
 
+/* Populates a buffer with the given file header information */
+void populate_file_header(char * buffer, int next_block, int bytes_allocated, char flag) {
+  memset(buffer, 0, BLOCKSIZE);
+  char *buffer_ptr = buffer;
+  
+  /* Populate type of file 'f' for file, 'd' for directory */
+  *buffer_ptr = flag;
+  
+  /* Fill in next block num */
+  buffer_ptr++;
+  memcpy(buffer_ptr, &next_block, BYTES_IN_INT);
+  
+  // Go to bytes allocated portion
+  buffer_ptr += BYTES_IN_INT;
+  memcpy(buffer_ptr, &bytes_allocated, BYTES_IN_INT);
+} // End populate_file_header
+
+/* Search a given directory block for a specified name.  Continue to the next
+ * block in the directory or return -1 if nothing is found and the entire
+ * directory has been searched.
+ */
 int search_directory_block_for_name(char * name, int directory_block_num) {
    // Return value
    int block_num_of_name;
@@ -34,8 +55,8 @@ int search_directory_block_for_name(char * name, int directory_block_num) {
    for (i = 0; i < num_iterations; i++) {
      
      // Look at each entry.  If it matches, then return the block number
-     if (strcmp(name, buffer_ptr)) {
-       memcpy(&block_num_of_name, buffer_ptr + FILE_NUM_PAIRINGS_SIZE, BYTES_IN_INT);
+     if (!strcmp(name, buffer_ptr)) {
+       memcpy(&block_num_of_name, buffer_ptr + MAX_FILE_NAME_LENGTH, BYTES_IN_INT);
        return block_num_of_name;
      }
      // If no match, then go to the next one.
@@ -53,7 +74,7 @@ int search_directory_block_for_name(char * name, int directory_block_num) {
 } // end search_directory_for_name
 
 int get_path_block_num (const char * path) {
-  // Copy path into buffer
+  // Copy path into a buffer
   char path_buffer[strlen(path) + 1];
   strcpy(path_buffer, path);
   
@@ -89,7 +110,9 @@ int get_path_block_num_recursive (char * path, int current_directory_block_num) 
   // There are more directories to traverse
   if (ptr_next_separator) {
 
+    // Copy the next directory in
     strncpy(next_name, path, ptr_next_separator - path);
+    next_name[ptr_next_separator - path] = '\0';
     
     int next_directory_block_num = 
       search_directory_block_for_name(next_name, current_directory_block_num);
@@ -99,11 +122,8 @@ int get_path_block_num_recursive (char * path, int current_directory_block_num) 
   
   // This is the last file/directory 
   else {
-    strncpy(next_name, path + 1, strlen(path));
-    next_name[strlen(path)] = '\0';
-    
     // Search for the file/directory in the current directory block
-    return search_directory_block_for_name(next_name, current_directory_block_num);
+    return search_directory_block_for_name(path, current_directory_block_num);
   } // End else
 } // End get_directory_block_num
 
