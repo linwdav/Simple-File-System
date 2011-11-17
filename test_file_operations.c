@@ -5,12 +5,12 @@ void test_file_operations_setup() {
   my_mkfs();
 }
 
-void test_search_directory_for_name()  {
+void test_search_directory_block_for_name()  {
   test_file_operations_setup();
   printf("hello");
 }
 
 int main (char argc, char ** argv)  {
-  test_search_directory_for_name();
+  test_search_directory_block_for_name();
   return 0;
 }

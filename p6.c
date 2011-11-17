@@ -19,12 +19,27 @@ int num_blocks;
 // Array of open files
 static int open_files[MAX_OPEN_FILES];
 static int open_files_current_position[MAX_OPEN_FILES];
-static int last_open_file_index = 0;
 
 /* open an existing file for reading or writing */
 int my_open (const char * path)
 {
-  printf ("my_open (%s) not implemented\n", path);
+  int block_num = get_path_block_num(path);
+  
+  int i;
+  for (i = 0; i < MAX_OPEN_FILES; i++) {
+    if (open_files[i] == 0) {
+      
+      // Store block number for file in open file array
+      open_files[i] = block_num;
+      
+      // Reset current position of file to the start of the file.
+      open_files_current_position[i] = HEADER_SIZE;
+      
+      return i;
+    } // End if
+  } // End for
+  
+  // Return -1 if no open slot in the open file list.
   return -1;
 }
 
@@ -46,7 +61,7 @@ int my_creat (const char * path)
   path_buffer[separator - path] = '\0';
 
   // Get directory file block number
-  int directory_block_num = get_path_block_num(path_buffer, ROOT_BLOCK);
+  int directory_block_num = get_path_block_num(path_buffer);
   
   // If directory does not exist, then set return value to -1 (error)
   
@@ -91,7 +106,13 @@ int my_write (int fd, const void * buf, int count)
 
 int my_close (int fd)
 {
-  printf ("my_close (%d) not implemented\n", fd);
+  // Remove from open file list if there is a valid block number.
+  if (open_files[fd] != 0) {
+    open_files[fd] = 0;
+    return 0;
+  }
+  
+  // If no file block number in the list at the fd index, return error code.
   return -1;
 }
 
@@ -167,6 +188,12 @@ void my_mkfs ()
   // Check block 0 to see if root directory exists (first byte on block 0 == 'd')
   if (buffer[0] != 'd') {
   
+    // initialize open files list to all 0s.
+    int i;
+    for(i = 0; i < MAX_OPEN_FILES; i++) {
+      open_files[i] = 0;
+    }
+  
     // If not create file system.
     // Create root directory at block 0.
     buffer[0] = 'd';
@@ -236,7 +263,6 @@ void my_mkfs ()
     
     // Write all 1s to as many full blocks as necessary starting
     // at the first block containing the free list bitmap
-    int i;
     for(i = 0; i < never_free_blocks; i++) {
       write_block(i + FREE_LIST_BITMAP_START, buffer);
     }    

@@ -10,6 +10,6 @@
 
 void test_file_operations_setup();
 
-void test_search_directory_for_name();
+void test_search_directory_block_for_name();
 
 #endif
