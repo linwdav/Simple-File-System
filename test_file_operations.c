@@ -116,24 +116,28 @@ void test_search_directory_block_for_name() {
 void test_get_path_block_num() {
   
   if (get_path_block_num("/foo2/hello.txt") < 0) {
-    printf("\ntest_get_path_block_num FAILED.\n");
+    printf("\ntest_get_path_block_num: FAILED.\n");
   }
   else if (get_path_block_num("/foo2/hello.txt") == FILE_BLOCK_1){
-    printf("\ntest_get_path_block_num PASSED.\n");
+    printf("\ntest_get_path_block_num: PASSED.\n");
   }
 }
 
 void test_my_creat() {
+  
+  int my_creat_result = 1;
+  
   char path[] = "/foo2/hello2.txt";
   
   // Check if file exists already
   unsigned int directory_block_num = get_path_block_num("/foo2/");
   unsigned int filename_found = search_directory_block_for_name("hello2.txt", directory_block_num);
   if ( filename_found == 0) {
-    printf("test_my_creat: file does not exist yet.\n");
+    printf("\ntest_my_creat: file does not exist yet.\n");
   }
   else {
-    printf("test_my_creat: file already exists.\n");
+    printf("\ntest_my_creat: file already exists.\n");
+    my_creat_result = 0;
   }
   
   int fd = my_creat(path);
@@ -141,7 +145,8 @@ void test_my_creat() {
   // Check to ensure that the filename has been added to it's directory
   unsigned int block_found = search_directory_block_for_name("hello2.txt", directory_block_num);
   if ( block_found == 0) {
-    printf("test_my_creat FAILED.  File not added to directory.\n");
+    printf("test_my_creat: FAILED.  File not added to directory.\n");
+    my_creat_result = 0;
   }
   else {
     printf("test_my_creat: file is in directory.\n");
@@ -158,28 +163,69 @@ void test_my_creat() {
   }
   else {
     printf("test_my_creat: file not created.\n");
+    my_creat_result = 0;
   }
   
   // Check to ensure file is open
   if (fd != 0) {
-    printf("\ntest_my_creat FAILED.  Incorrect file descriptor.\n");
+    printf("test_my_creat: FAILED.  Incorrect file descriptor.\n");
+    my_creat_result = 0;
   }
   else {
-    printf("\ntest_my_creat: file block returned - %i\n", open_files[fd]);
+    printf("test_my_creat: file block returned - %i\n", open_files[fd]);
   }
 
   // reset free block list bit
   setBlockInBitmapToStatus (0, open_files[fd]);
   
   my_close(fd);
+  if (my_creat_result) {
+    printf("test_my_creat: PASSED.\n");
+  }
+  else {
+    printf("test_my_creat: FAILED.\n");
+  }
 }
 
 void test_my_open () {
+  unsigned int fd = my_creat("/foo2/hello4.txt");
+  unsigned int block_num = open_files[fd];
+  my_close(fd);
   
+  int i, first_open_slot;
+  for (i = 0; i < MAX_OPEN_FILES; i++) {
+    if(open_files[i] == 0) {
+      first_open_slot = i;
+      i = MAX_OPEN_FILES;
+    }
+  }
+  
+  fd = my_open("/foo2/hello4.txt");
+  if (fd == first_open_slot) {
+    printf("\ntest_my_open: PASSED\n");
+  }
+  else {
+    printf("\ntest_my_open: FAILED\n");
+  }
 }
 
 void test_my_close () {
+  unsigned int fd = my_creat("/foo2/hello3.txt");
+  unsigned int block_num = open_files[fd];
   
+  if (block_num == 0) {
+    printf("\ntest_my_close: failed to create file\n");
+    return;
+  }
+  
+  my_close(fd);
+  
+  if (open_files[fd] == 0) {
+    printf("\ntest_my_close: PASSED\n");
+  }
+  else {
+    printf("\ntest_my_close: FAILED\n");
+  }
 }
 
 int main (char argc, char ** argv)  {
@@ -188,7 +234,14 @@ int main (char argc, char ** argv)  {
   /** TESTED - PASS **/
   test_get_path_block_num();
   
+  /** TESTED - PASS **/
   test_my_creat();
+  
+  /** TESTED - PASS **/
+  test_my_close();
+  
+  test_my_open();
+  
   
   return 0;
 }
