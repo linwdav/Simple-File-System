@@ -207,6 +207,11 @@ void test_my_open () {
   else {
     printf("\ntest_my_open: FAILED\n");
   }
+  
+  // reset free block list bit
+  setBlockInBitmapToStatus (0, open_files[fd]);
+  
+  my_close(fd);
 }
 
 void test_my_close () {
@@ -217,6 +222,9 @@ void test_my_close () {
     printf("\ntest_my_close: failed to create file\n");
     return;
   }
+  
+  // reset free block list bit
+  setBlockInBitmapToStatus (0, open_files[fd]);
   
   my_close(fd);
   
