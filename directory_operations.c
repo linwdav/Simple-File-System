@@ -3,8 +3,12 @@
 /* Used when creating a directory.  Returns the block number of the directory block in which
  * to place the new entry and the block number of the first free block available for the new
  * directory.
+ * path - The path to parse.
+ * rename_start_block - Only needed if renaming not creating a new directory, the start block of the
+ * already existing directory, needed for pairing with name in directory.
+ * flag - whether renaming or creating a new directory.
  */
-int parseAndCreateDirectory(const char * path) {
+int parseAndCreateDirectory(const char * path, int rename_start_block, char flag) {
   // Start at root.
   int parentDirectory = 0;
 
@@ -24,6 +28,20 @@ int parseAndCreateDirectory(const char * path) {
   while (token != NULL) {
 	// Then directory is the directory we want to add
 	if (nextToken == NULL) {
+	  // Check if directory exists before trying to add it, if it does return error.
+	  if (check_directory_exists(directory, parentDirectory) < 0) {
+		return -1;
+	  }
+
+	  // Not creating a new directory simply renaming it.
+	  if (flag == 'r') {
+		// Add entry with name: directory, starting block number: rename_start_block to the directory: parentDirectory
+	    if (addEntry(directory, rename_start_block, parentDirectory) < 0) {
+		  return -1;
+	    }
+	    return 0;
+	  }
+
 	  int newBlockNum;
 	  if ((newBlockNum = requestNextFreeBlock()) < 0) {
 		return -1;
@@ -223,6 +241,7 @@ void deleteDirectoryRecursively(int blockNum) {
 	  memcpy(&fileStartBlock, filenamePairing + FILENAME_SIZE, sizeof(fileStartBlock));
 	  fileType = determineFileType(fileStartBlock);
 	  if (fileType == 'f') {
+		close_file_if_open(fileStartBlock);
         deleteFileRecursively(fileStartBlock);
       }
       else {
@@ -248,6 +267,7 @@ void deleteDirectoryRecursively(int blockNum) {
 	  memcpy(&fileStartBlock, filenamePairing + FILENAME_SIZE, sizeof(fileStartBlock));
 	  fileType = determineFileType(fileStartBlock);
 	  if (fileType == 'f') {
+		close_file_if_open(fileStartBlock);
         deleteFileRecursively(fileStartBlock);
       }
       else {
@@ -554,4 +574,48 @@ int updateParentDirectoryNum(char directory[FILENAME_SIZE], int parentDirectory)
 	// Wasn't in any blocks after this one or in this one itself.
 	return -1;
   }
+}
+
+/* Check if the directory exists before trying to create it.  Returns -1 if already exists.
+ * directory - the name of the directory to check for.
+ * blockNum - the block number of the directory to check in.
+ */
+int check_directory_exists(char * directory, int blockNum) {
+	char buffer[1024];
+
+	if (read_block(blockNum, buffer) < 0) {
+	  printf("Error reading block #%d\n", blockNum);
+	  return -1;
+	}
+
+	char * buffer_ptr = buffer + 1;
+
+	int nextBlock;
+	memcpy(&nextBlock, buffer_ptr, sizeof(nextBlock));
+
+	short bytesAllocated;
+	memcpy(&bytesAllocated, buffer_ptr + sizeof(nextBlock), sizeof(bytesAllocated));
+
+	int loops = bytesAllocated / FILE_NUM_PAIRINGS_SIZE;
+	char check_filename[FILENAME_SIZE];
+	buffer_ptr = buffer + 8;
+	// Loop through the directory block for each filename.
+	while (loops != 0) {
+	  strncpy(check_filename, buffer_ptr, FILENAME_SIZE);
+
+	  // If the filename is the same as the one trying to add, return error
+	  if (strcmp(check_filename, directory) == 0) {
+		return -1;
+	  }
+
+	  loops--;
+	  buffer_ptr = buffer_ptr + FILE_NUM_PAIRINGS_SIZE;
+	}
+
+	int check = 0;
+	if (nextBlock != 0) {
+	  check = check_directory_exists(directory, nextBlock);
+	}
+
+	return check;
 }

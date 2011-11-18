@@ -5,12 +5,12 @@
 #include <stdlib.h>
 #include <string.h>
 #include "block.h"
-#include "bitmap_operations.h"
+#include "p6.h"
 
 #define FILE_NUM_PAIRINGS_SIZE 204
 #define FILENAME_SIZE 200
 
-int parseAndCreateDirectory(const char * path);
+int parseAndCreateDirectory(const char * path, int rename_start_block, char flag);
 char * parseRemoveNums(const char * path, int blockNums[2], char flag);
 int findNextBlockNum(char * filename, int blockNums[2]);
 void deleteDirectoryRecursively(int blockNum);

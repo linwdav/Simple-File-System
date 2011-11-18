@@ -137,14 +137,34 @@ int my_remove (const char * path)
 
 int my_rename (const char * old, const char * new)
 {
-  printf ("my_remove (%s, %s) not implemented\n", old, new);
-  return -1;
+  int blockNums[2];
+  char * oldFile;
+
+  // find the block number of where the old entry is.
+  oldFile = parseRemoveNums(old, blockNums, 'r');
+  if (blockNums[1] == -1) {
+    return -1;
+  }
+
+  // find the block number of where the new entry should go and add it
+  // do this first so that if it errors out haven't removed the entry yet.
+  if (parseAndCreateDirectory(new, blockNums[1], 'r') < 0) {
+	return -1;
+  }
+
+  // remove it.
+  if (removeEntry(oldFile, blockNums[0]) < 0) {
+	return -1;
+  }
+
+  return 0;
 }
 
 /* only works if all but the last component of the path already exists */
 int my_mkdir (const char * path)
 {
-  if (parseAndCreateDirectory(path) < 0) {
+  // Second and third arguments only necessary if renaming a directory not creating a new one.
+  if (parseAndCreateDirectory(path, 0, 'c') < 0) {
 	return -1;
   }
 
@@ -317,3 +337,15 @@ void my_mkfs ()
   }
 
 } // End my_mkfs
+
+/* Needed for when deleting a file.  Don't want the file to remain in the open list.
+ * blockNum - The block number of the file that's being deleted.
+ */
+void close_file_if_open(int block_num) {
+	int i;
+	for (i = 0; i < MAX_OPEN_FILES; i++) {
+	  if (open_files[i] == block_num) {
+		  open_files[i] = 0;
+	  }
+	}
+}

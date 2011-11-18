@@ -36,6 +36,8 @@ extern int my_rmdir (const char * path);
 
 extern void my_mkfs ();
 
+void close_file_if_open(int block_num);
+
 /* provided by the lower layer */
 
 #define BLOCKSIZE 1024
