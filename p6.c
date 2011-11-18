@@ -200,7 +200,7 @@ int my_rmdir (const char * path)
   char * filename;
 
   filename = parseRemoveNums(path, blockNums, 'r');
-  if (blockNums[1] == -1) {
+  if (blockNums[1] == -1 || filename == NULL) {
     return -1;
   }
 

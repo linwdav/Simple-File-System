@@ -19,31 +19,44 @@ int parseAndCreateDirectory(const char * path, int rename_start_block, char flag
   // Ex. /foo, where token would be foo and nextToken would be NULL
   if (nextToken == NULL) {
 	strcpy(directory, token);
+	directory[strlen(token)] = '\0';
   }
   // Ex. /foo/bar, where token would be foo/bar and nextToken would be /bar
   else {
 	strncpy(directory, token, nextToken - token);
+	directory[nextToken - token] = '\0';
   }
 
   while (token != NULL) {
 	// Then directory is the directory we want to add
 	if (nextToken == NULL) {
+	  if (strlen(directory) > FILENAME_SIZE) {
+	    printf("Directory name too long\n");
+		return -1;
+	  }
+
+	  int exists;
 	  // Check if directory exists before trying to add it, if it does return error.
-	  if (check_directory_exists(directory, parentDirectory) < 0) {
+	  if ((exists = check_directory_exists(directory, parentDirectory)) > 0) {
+		printf("Directory %s already exists in block %d\n", directory, exists);
 		return -1;
 	  }
 
 	  // Not creating a new directory simply renaming it.
 	  if (flag == 'r') {
-		// Add entry with name: directory, starting block number: rename_start_block to the directory: parentDirectory
-	    if (addEntry(directory, rename_start_block, parentDirectory) < 0) {
+		// Add entry with name: directory, starting block number: rename_start_block, to the directory: parentDirectory
+	    if ((parentDirectory = addEntry(directory, rename_start_block, parentDirectory)) < 0) {
 		  return -1;
 	    }
+
+		printf("Renamed directory to %s\nAdded the entry at %d\twith name: %s, at block %d\n", path, parentDirectory, directory, rename_start_block);
+
 	    return 0;
 	  }
 
 	  int newBlockNum;
 	  if ((newBlockNum = requestNextFreeBlock()) < 0) {
+		printf("No more free blocks\n");
 		return -1;
 	  }
 	  setBlockInBitmapToStatus(1, newBlockNum);
@@ -72,30 +85,39 @@ int parseAndCreateDirectory(const char * path, int rename_start_block, char flag
 		printf("Error reading block #%d\n", newBlockNum);
 		return -1;
 	  }
+
 	  // Add entry with name: directory, starting block number: newBlockNum, to the directory: parentDirectory
-	  if (addEntry(directory, newBlockNum, parentDirectory) < 0) {
+	  if ((parentDirectory = addEntry(directory, newBlockNum, parentDirectory)) < 0) {
 		return -1;
 	  }
+
+	  printf("Created directory at %s\nAdded the entry at %d\twith name: %s, at block %d\n", path, parentDirectory, directory, newBlockNum);
+
 	  return 0;
 	}
 
 	// Nested path so update the parentDirectory number to be the next one in the path.
 	// Ex. directory = foo (from /foo/bar), so starting in root directory (0) look for foo and return it's starting block
-	parentDirectory = updateParentDirectoryNum(directory, parentDirectory);
+	if ((parentDirectory = updateParentDirectoryNum(directory, parentDirectory)) < 0) {
+	  printf("Couldn't update parent directory number\nwith directory %s at block number %d\n", directory, parentDirectory);
+	  return -1;
+	}
 
 	// Update the directory
 	// Ex. first iteration: token = foo/bar, nextToken = /bar, directory = foo
 	// After update: token = bar, nextToken = NULL, directory = bar
 	// So now we know bar is the directory to be added since it was the last part of the path (i.e. nextToken = NULL)
-	memset(nextToken, '\0', strlen(nextToken));
-	memset(directory, '\0', FILENAME_SIZE);
+	// memset(nextToken, '\0', strlen(nextToken));
+	// memset(directory, '\0', FILENAME_SIZE);
 	token = strchr(token, '/') + 1;
 	nextToken = strchr(token, '/');
 	if (nextToken == NULL) {
 	  strcpy(directory, token);
+	  directory[strlen(token)] = '\0';
 	}
 	else {
 	  strncpy(directory, token, nextToken - token);
+	  directory[nextToken - token] = '\0';
 	}
   }
 }
@@ -112,9 +134,11 @@ char * parseRemoveNums(const char * path, int blockNums[2], char flag) {
   char * directory = malloc(FILENAME_SIZE * sizeof(char));
   if (nextToken == NULL) {
 	  strcpy(directory, token);
+	  directory[strlen(token)] = '\0';
   }
   else {
     strncpy(directory, token, nextToken - token);
+	directory[nextToken - token] = '\0';
   }
   char buffer[BLOCKSIZE];
 
@@ -122,26 +146,29 @@ char * parseRemoveNums(const char * path, int blockNums[2], char flag) {
     if (findNextBlockNum(directory, blockNums) < 0) {
 	  return NULL;
 	}
-
 	if (nextToken == NULL) {
 	  token = NULL;
 	}
 	else {
-	  memset(nextToken, '\0', strlen(nextToken));
-	  memset(directory, '\0', FILENAME_SIZE);
+	  // memset(nextToken, '\0', strlen(nextToken));
+	  // memset(directory, '\0', FILENAME_SIZE);
 	  token = strchr(token, '/') + 1;
 	  nextToken = strchr(token, '/');
 	  if (nextToken == NULL) {
 		strcpy(directory, token);
+		directory[strlen(token)] = '\0';
 	  }
 	  else {
 		strncpy(directory, token, nextToken - token);
+		directory[nextToken - token] = '\0';
 	  }
+
+	  blockNums[0] = blockNums[1];
 	}
 
 	if (read_block(blockNums[1], buffer) < 0) {
 	  printf("Error reading block #%d\n", blockNums[1]);
-      exit(1);
+      return NULL;
 	}
 
 	if (buffer[0] != 'd' && flag == 'r') {
@@ -161,39 +188,33 @@ int findNextBlockNum(char *filename, int blockNums[2]) {
 	char buffer[BLOCKSIZE];
 	if (read_block(blockNums[0], buffer) < 0) {
 	  printf("Error reading block #%d\n", blockNums[0]);
-      exit(1);
+      return -1;
 	}
 
-	char *buffer_ptr = buffer;
+	char *buffer_ptr = buffer + 1;
 	int blockNum;
 
 	int nextBlock;
-	memcpy(&nextBlock, ++buffer_ptr, sizeof(nextBlock));
+	memcpy(&nextBlock, buffer_ptr, sizeof(nextBlock));
 
 	short bytesAllocated;
 	memcpy(&bytesAllocated, buffer_ptr + sizeof(nextBlock), sizeof(bytesAllocated));
 	int loops = bytesAllocated / FILE_NUM_PAIRINGS_SIZE;
-	buffer_ptr = buffer_ptr + 7;
+	buffer_ptr = buffer + HEADER_SIZE;
 
-	char filenamePairing[FILE_NUM_PAIRINGS_SIZE];
-	char name[FILENAME_SIZE];
-	char num[sizeof(blockNum)];
-	char * nullIndex;
+	int num;
 	while (loops != 0) {
-	  strncpy(filenamePairing, buffer_ptr, FILE_NUM_PAIRINGS_SIZE);
-	  nullIndex = strchr(filenamePairing, '\0');
-	  strncpy(name, filenamePairing, nullIndex - filenamePairing); //foo.txt\0
-	  strncpy(num, filenamePairing + FILENAME_SIZE, sizeof(num));
+	  char name[FILENAME_SIZE];
+	  strncpy(name, buffer_ptr, FILENAME_SIZE);
+	  memcpy(&num, buffer_ptr + FILENAME_SIZE, sizeof(num));
   	  if (strcmp(filename, name) == 0) {
-		memcpy(&blockNums[1], num, sizeof(blockNums[1]));
+		blockNums[1] = num;
 		return 0;
 	  }
 
 	  loops--;
 	  buffer_ptr = buffer_ptr + FILE_NUM_PAIRINGS_SIZE;
-
 	  memset(name, '\0', FILENAME_SIZE);
-	  memset(num, '\0', sizeof(blockNum));
 	}
 	blockNums[1] = -1;
 
@@ -232,13 +253,13 @@ void deleteDirectoryRecursively(int blockNum) {
   // Last block for directory
   if (nextBlock == 0) {
     // Delete every entry in directory block
-	buffer_ptr = buffer_ptr + 7;
-	char filenamePairing[FILE_NUM_PAIRINGS_SIZE];
+	buffer_ptr = buffer + HEADER_SIZE;
 
     while (loops != 0) {
-	  strncpy(filenamePairing, buffer_ptr, FILE_NUM_PAIRINGS_SIZE);
+	  char name[FILENAME_SIZE];
+	  strncpy(name, buffer_ptr, FILENAME_SIZE);
 
-	  memcpy(&fileStartBlock, filenamePairing + FILENAME_SIZE, sizeof(fileStartBlock));
+	  memcpy(&fileStartBlock, buffer_ptr + FILENAME_SIZE, sizeof(fileStartBlock));
 	  fileType = determineFileType(fileStartBlock);
 	  if (fileType == 'f') {
 		close_file_if_open(fileStartBlock);
@@ -254,17 +275,19 @@ void deleteDirectoryRecursively(int blockNum) {
 
     // Remove directory block from freeblock list
     deleteBlock(blockNum);
+	printf("Removed directory at block: %d\n", blockNum);
   }
   else {
     deleteDirectoryRecursively(nextBlock);
     // Delete every entry in directory block
-	buffer_ptr = buffer_ptr + 7;
-	char filenamePairing[FILE_NUM_PAIRINGS_SIZE];
+	buffer_ptr = buffer + 8;
+
 
     while (loops != 0) {
-	  strncpy(filenamePairing, buffer_ptr, FILE_NUM_PAIRINGS_SIZE);
+	  char name[FILENAME_SIZE];
+	  strncpy(name, buffer_ptr, FILENAME_SIZE);
 
-	  memcpy(&fileStartBlock, filenamePairing + FILENAME_SIZE, sizeof(fileStartBlock));
+	  memcpy(&fileStartBlock, buffer_ptr + FILENAME_SIZE, sizeof(fileStartBlock));
 	  fileType = determineFileType(fileStartBlock);
 	  if (fileType == 'f') {
 		close_file_if_open(fileStartBlock);
@@ -279,6 +302,7 @@ void deleteDirectoryRecursively(int blockNum) {
     }
     // Remove directory block from freeblock list
     deleteBlock(blockNum);
+	printf("Removed directory at block: %d\n", blockNum);
   }
 }
 
@@ -379,22 +403,33 @@ int removeEntry(char * filename, int blockNum) {
   memcpy(&bytesAllocated, buffer_ptr + sizeof(int), sizeof(bytesAllocated));
 
   int loops = bytesAllocated / FILE_NUM_PAIRINGS_SIZE;
-  buffer_ptr = buffer_ptr + 7;
+  buffer_ptr = buffer + HEADER_SIZE;
   int filePos = 8;
-  char name[FILENAME_SIZE];
 
   while (loops != 0) {
-	memset(name, '\0', FILENAME_SIZE);
+    char name[FILENAME_SIZE];
     strncpy(name, buffer_ptr, FILENAME_SIZE);
 
 	if (strcmp(filename, name) == 0) {
+		// Create a temporary buffer to hold everything from the block after the entry to be deleted.
 		char temp[(BLOCKSIZE - filePos) - FILE_NUM_PAIRINGS_SIZE];
 		strcpy(temp, buffer_ptr + FILE_NUM_PAIRINGS_SIZE);
+
+		// Clear the directory block starting from beginning of entry, and copy back in 
+		// everything from after the deleted entry.
 		memset(buffer + filePos, '\0', BLOCKSIZE - filePos);
 		strcpy(buffer_ptr, temp);
+
+		// Adjust the bytes allocated.
 		bytesAllocated = bytesAllocated - FILE_NUM_PAIRINGS_SIZE;
 		buffer_ptr = buffer + 1 + sizeof(int);
 		memcpy(buffer_ptr, &bytesAllocated, sizeof(bytesAllocated));
+
+		if (write_block(blockNum, buffer) < 0) {
+		  printf("Error writing block #%d\n", blockNum);
+		  return -1;
+		}
+
 		return 0;
 	}
 
@@ -428,6 +463,7 @@ int addEntry(char directory[FILENAME_SIZE], int newBlock, int parentBlock) {
 
 	// There is not enough free space in this block
 	if ((BLOCKSIZE - bytesAllocated) < FILE_NUM_PAIRINGS_SIZE) {
+
 		//There is no next block so have to create one.
 		if (nextBlock == 0) {
 		  int newNextBlock;
@@ -453,7 +489,8 @@ int addEntry(char directory[FILENAME_SIZE], int newBlock, int parentBlock) {
 		  short newAllocation = HEADER_SIZE + FILE_NUM_PAIRINGS_SIZE;
 		  memcpy(buffer_ptr + sizeof(nextBlock), &newAllocation, sizeof(newAllocation));
 
-		  buffer_ptr = buffer_ptr + 7;
+		  // add in the filename block number entry to the new directory block.
+		  buffer_ptr = newDirectoryBlock + HEADER_SIZE;
 		  strncpy(buffer_ptr, directory, FILENAME_SIZE);
 		  memcpy(buffer_ptr + FILENAME_SIZE, &newBlock, sizeof(newBlock));
 
@@ -471,26 +508,26 @@ int addEntry(char directory[FILENAME_SIZE], int newBlock, int parentBlock) {
 			return -1;
 		  }
 
-		  return 0;
+		  return newNextBlock;
 		}
 		// Directory block is full but there is a next block.
 		else {
 			// recursive call that tries to add the new directory to the new block.
-			return addEntry(directory, nextBlock, newBlock);
+			return addEntry(directory, newBlock, nextBlock);
 		}
 	}
 	// There is enough space in the block.
 	else {
 	  // Go to end of allocated block
-	  buffer_ptr = buffer_ptr + bytesAllocated;
+	  buffer_ptr = buffer + bytesAllocated;
 
-	  // Copy in the filename and assocated block number
+	  // Copy in the filename and associated block number
 	  strncpy(buffer_ptr, directory, FILENAME_SIZE);
 	  buffer_ptr = buffer_ptr + FILENAME_SIZE;
 	  memcpy(buffer_ptr, &newBlock, sizeof(newBlock));
 
 	  // Recompute bytes allocated and copy it in
-	  buffer_ptr = buffer_ptr + 1 + sizeof(nextBlock);
+	  buffer_ptr = buffer + 1 + sizeof(nextBlock);
 	  bytesAllocated = bytesAllocated + FILE_NUM_PAIRINGS_SIZE;
 	  memcpy(buffer_ptr, &bytesAllocated, sizeof(bytesAllocated));
 
@@ -499,7 +536,7 @@ int addEntry(char directory[FILENAME_SIZE], int newBlock, int parentBlock) {
 		return -1;
 	  }
 
-	  return 0;
+	  return parentBlock;
 	}
 }
 
@@ -605,14 +642,14 @@ int check_directory_exists(char * directory, int blockNum) {
 
 	  // If the filename is the same as the one trying to add, return error
 	  if (strcmp(check_filename, directory) == 0) {
-		return -1;
+		return blockNum;
 	  }
 
 	  loops--;
 	  buffer_ptr = buffer_ptr + FILE_NUM_PAIRINGS_SIZE;
 	}
 
-	int check = 0;
+	int check = -1;
 	if (nextBlock != 0) {
 	  check = check_directory_exists(directory, nextBlock);
 	}
