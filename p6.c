@@ -91,8 +91,31 @@ int my_creat (const char * path)
 /* sequentially read from a file */
 int my_read (int fd, void * buf, int count)
 {
-  printf ("my_read (%d, %x, %d) not implemented\n", fd, *((unsigned int *)buf), count);
-  return -1;
+  // Returns number of bytes read.
+  int return_value = 0;
+  
+  // Total number of bytes available to store data in each block.
+  int valid_bytes_in_block = BLOCKSIZE - HEADER_SIZE;
+  
+  unsigned int current_block_num = open_files[fd];
+  
+  // Check to ensure that the file descriptor is valid
+  if (current_block_num != 0) {
+    
+    unsigned int next_block;
+    unsigned int bytes_allocated;
+    
+    // Read in header data from current block number
+    // Continue to loop and read in data to buf while count > bytes_allocated
+    // Then read in remainder of bytes into buf.
+    // Return if count is too big and the EOF has been reached.
+  }
+  // If file is not open, then return error value.
+  else {
+    return_value = -1;
+  }
+  
+  return return_value;
 }
 
 /* sequentially write to a file */

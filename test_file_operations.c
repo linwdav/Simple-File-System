@@ -11,7 +11,7 @@ int size_of_disk;
 /*
  * Hard codes the following directory structure:
  * root
- *   foo1 50  (Directory block 0)
+ *   foo1 50  (Directory block 0) - NOTE: no actual directory file created
  *   foo2 60,70  (Directory block 1)
  *     bar1 80 (Directory block 1_1)
  *     hello.txt 100 (File block 1)
@@ -236,6 +236,10 @@ void test_my_close () {
   }
 }
 
+void test_my_read() {
+  
+}
+
 int main (char argc, char ** argv)  {
   test_file_operations_setup();
   
@@ -248,8 +252,10 @@ int main (char argc, char ** argv)  {
   /** TESTED - PASS **/
   test_my_close();
   
+  /** TESTED - PASS **/
   test_my_open();
   
+  test_my_read();
   
   return 0;
 }

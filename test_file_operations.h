@@ -14,5 +14,6 @@ void test_search_directory_block_for_name();
 void test_my_creat();
 void test_my_open();
 void test_my_close();
+void test_my_read();
 
 #endif
