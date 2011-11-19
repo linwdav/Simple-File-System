@@ -167,8 +167,42 @@ int my_close (int fd)
 
 int my_remove (const char * path)
 {
-  printf ("my_remove (%s) not implemented\n", path);
-  return -1;
+  int block_nums[2];
+  char * filename;
+
+  // Get the filename of file to remove as well as block number of directory file is in, and
+  // the root block number of the file as well.
+  filename = parseRemoveNums(path, block_nums, 'f');
+  if (block_nums[1] == -1) {
+	return -1;
+  }
+
+  // If this file/directory is the last one in the directory block have to delete directory block
+  // and redo next block pointers.
+  int parent_blocks[2];
+  char * dir = malloc((FILENAME_SIZE + 1) * sizeof(char));
+
+  if ((dir = get_parent_blocks(path, parent_blocks)) == NULL) {
+	return -1;
+  }
+  
+  if (deleteFileRecursively(block_nums[1]) < 0) {
+	return -1;
+  }
+
+  // Remove the file's entry from the directory.
+  if (removeEntry(filename, block_nums[0]) < 0) {
+	return -1;
+  }
+  
+  if (update_directory_blocks(dir, parent_blocks) < 0) {
+	return -1;
+  }
+  
+  // Remove the file from the open list if it's in there.
+  close_file_if_open(block_nums[1]);
+
+  return 0;
 }
 
 int my_rename (const char * old, const char * new)
@@ -217,17 +251,29 @@ int my_rmdir (const char * path)
     return -1;
   }
 
+  int parent_blocks[2];
+  char * dir;
+  if ((dir = get_parent_blocks(path, parent_blocks)) == NULL) {
+	return -1;
+  }
+
   if (determineFileType(blockNums[1]) != 'd') {
 	return -1;
   }
 
-  deleteDirectoryRecursively(blockNums[1]);
+  if (deleteDirectoryRecursively(blockNums[1]) < 0) {
+	return -1;
+  }
 
   // Remove entry from parent directory.
   if (removeEntry(filename, blockNums[0]) < 0) {
 	return -1;
   }
 
+  if (update_directory_blocks(dir, parent_blocks) < 0) {
+	return -1;
+  }
+  
   return 0;
 }
 

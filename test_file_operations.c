@@ -258,6 +258,16 @@ void test_multiple_creat() {
 	printf("test_multiple_creat test2.txt at block %i\n", open_files[success2]);
 	printf("test_multiple_creat test3.txt at block %i\n", open_files[success3]);
 	printf("test_multiple_creat test4.txt at block %i\n", open_files[success4]);
+
+	if ((my_remove("/test0.txt") > 0) || (my_remove("/test1.txt") > 0) || 
+		(my_remove("/test2.txt") > 0) || (my_remove("/test3.txt") > 0) || 
+		(my_remove("/test4.txt") > 0)) {
+	  printf("Failed at removing after multiple creates\n");
+	  exit(1);
+	}
+
+	printf("test_multiple_creat removed all txt files\n");
+	printf("test_multiple_creat: PASSED\n");
 }
 
 void test_my_write() {
@@ -516,6 +526,117 @@ void test_my_write() {
 	 printf("Error file still seen as open\n");
 	 exit(1);
 	}
+
+	printf("Recursively deleted directory /foo\n");
+	printf("test_my_write: PASSED\n");
+}
+
+void test_my_remove() {
+	printf("\ntest_my_remove:\n");
+  	int fd, fd2, fd3, fd4, fd5, fd6, fd7;
+	if ((fd = my_creat("/test.txt")) < 0) {
+	  printf("Failed at creating file /test.txt\n");
+	  exit(1);
+	}
+
+	if ((fd2 = my_creat("/test2.txt")) < 0) {
+	  printf("Failed at creating file /test.txt\n");
+	  exit(1);
+	}
+
+	if ((fd3 = my_creat("/test3.txt")) < 0) {
+	  printf("Failed at creating file /test.txt\n");
+	  exit(1);
+	}
+
+	if ((fd4 = my_creat("/test4.txt")) < 0) {
+	  printf("Failed at creating file /test.txt\n");
+	  exit(1);
+	}
+
+	if ((fd5 = my_creat("/test5.txt")) < 0) {
+	  printf("Failed at creating file /test.txt\n");
+	  exit(1);
+	}
+
+	if ((fd6 = my_creat("/test6.txt")) < 0) {
+	  printf("Failed at creating file /test.txt\n");
+	  exit(1);
+	}
+
+	if ((fd7 = my_creat("/test7.txt")) < 0) {
+	  printf("Failed at creating file /test.txt\n");
+	  exit(1);
+	}
+
+	int block_num, block_num_2, block_num_3, block_num_4, block_num_5, block_num_6, block_num_7;
+	block_num = get_associated_block_num(fd);
+	block_num_2 = get_associated_block_num(fd2);
+	block_num_3 = get_associated_block_num(fd3);
+	block_num_4 = get_associated_block_num(fd4);
+	block_num_5 = get_associated_block_num(fd5);
+	block_num_6 = get_associated_block_num(fd6);
+	block_num_7 = get_associated_block_num(fd7);
+	printf("Created file /test.txt at block %d\n", block_num);
+	printf("Created file /test2.txt at block %d\n", block_num_2);
+	printf("Created file /test3.txt at block %d\n", block_num_3);
+	printf("Created file /test4.txt at block %d\n", block_num_4);
+	printf("Created file /test5.txt at block %d\n", block_num_5);
+	printf("Created file /test6.txt at block %d\n", block_num_6);
+	printf("Created file /test7.txt at block %d\n", block_num_7);
+
+	if (my_remove("/test.txt") < 0) {
+	  printf("Failed to remove file /test.txt\n");
+	  exit(1);
+	}
+
+	if (my_remove("/test2.txt") < 0) {
+	  printf("Failed to remove file /test2.txt\n");
+	  exit(1);
+	}
+
+	if (my_remove("/test3.txt") < 0) {
+	  printf("Failed to remove file /test3.txt\n");
+	  exit(1);
+	}
+
+	if (my_remove("/test4.txt") < 0) {
+	  printf("Failed to remove file /test4.txt\n");
+	  exit(1);
+	}
+
+	if (my_remove("/test5.txt") < 0) {
+	  printf("Failed to remove file /test5.txt\n");
+	  exit(1);
+	}
+
+	if (my_remove("/test6.txt") < 0) {
+	  printf("Failed to remove file /test6.txt\n");
+	  exit(1);
+	}
+
+	if (my_remove("/test7.txt") < 0) {
+	  printf("Failed to remove file /test7.txt\n");
+	  exit(1);
+	}
+
+	block_num = get_associated_block_num(fd);
+	block_num_2 = get_associated_block_num(fd2);
+	block_num_3 = get_associated_block_num(fd3);
+	block_num_4 = get_associated_block_num(fd4);
+	block_num_5 = get_associated_block_num(fd5);
+	block_num_6 = get_associated_block_num(fd6);
+	block_num_7 = get_associated_block_num(fd7);
+
+	if (block_num != 0 || block_num_2 != 0 || block_num_3 != 0 || block_num_4 != 0 
+		|| block_num_5 != 0 || block_num_6 != 0 || block_num_7 != 0) {
+	  printf("BLOCK 1: %d\nBLOCK 2: %d\nBLOCK 3: %d\nBLOCK 4: %d\nBLOCK 5: %d\nBLOCK 6: %d\nBLOCK 7: %d\n", 
+		  block_num, block_num_2, block_num_3, block_num_4, block_num_5, block_num_6, block_num_7);
+	  exit(1);
+	}
+
+	printf("Successfully removed all files\n");
+	printf("test_my_remove: PASSED\n");
 }
 
 int main (char argc, char ** argv)  {
@@ -527,7 +648,7 @@ int main (char argc, char ** argv)  {
   /** TESTED - PASS **/
   test_my_creat();
 
-  /** TESTED - ??? **/
+  /** TESTED - PASS **/
   test_multiple_creat();
 
   /** TESTED - PASS **/
@@ -538,6 +659,9 @@ int main (char argc, char ** argv)  {
 
   /** TESTED - PASS **/
   test_my_write();
+
+  /** TESTED - PASS **/
+  test_my_remove();
   
   test_my_read();
   
