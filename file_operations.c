@@ -71,10 +71,10 @@ int add_entry_to_directory(unsigned int directory_block_num, char * entry_name, 
       populate_file_header(buffer, ROOT_BLOCK, HEADER_SIZE + FILE_NUM_PAIRINGS_SIZE, 'd');
 
       // Copy in name and block number for entry
-      buffer_ptr += HEADER_SIZE;
+      buffer_ptr += HEADER_SIZE - 1;
       strcpy(buffer_ptr, entry_name);
       
-      buffer_ptr += BYTES_IN_INT;
+      buffer_ptr += MAX_FILE_NAME_LENGTH;
       memcpy(buffer_ptr, &entry_block_num, BYTES_IN_INT);
 
       write_block(new_directory_block, buffer);

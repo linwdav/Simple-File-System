@@ -50,11 +50,14 @@ int my_creat (const char * path)
   
   // Get next free block
   unsigned int file_block_num = requestNextFreeBlock();
+
+  // Flip bit in free block list
+  setBlockInBitmapToStatus (1, file_block_num);
   
   // Split path into directory path and filename
   char *separator = strrchr(path, PATH_SEPARATOR);
   char filename_buffer[MAX_FILE_NAME_LENGTH];
-  char path_buffer[strlen(path)];
+  char path_buffer[strlen(path) + 1];
   
   strcpy(filename_buffer, separator + 1);
   strncpy(path_buffer, path, separator - path);
@@ -81,9 +84,6 @@ int my_creat (const char * path)
   char header_buffer[BLOCKSIZE];
   populate_file_header(header_buffer, ROOT_BLOCK, HEADER_SIZE, 'f');
   write_block(file_block_num, header_buffer);
-  
-  // Flip bit in free block list
-  setBlockInBitmapToStatus (1, file_block_num);
   
   return fd;
 } // end my_creat

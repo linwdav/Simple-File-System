@@ -241,6 +241,25 @@ void test_my_read() {
   
 }
 
+void test_multiple_creat() {
+	int success0, success1, success2, success3, success4;
+	
+	success0 = my_creat("/test0.txt");
+	success1 = my_creat("/test1.txt");
+	success2 = my_creat("/test2.txt");
+	success3 = my_creat("/test3.txt");
+	success4 = my_creat("/test4.txt");
+	
+	if (success0 = success1 * success2 * success3 * success4 < 0) {
+		printf("\ntest_multiple_creat: FAILED\n");
+	}
+	printf("\ntest_multiple_creat test0.txt at block %i\n", open_files[success0]);
+	printf("test_multiple_creat test1.txt at block %i\n", open_files[success1]);
+	printf("test_multiple_creat test2.txt at block %i\n", open_files[success2]);
+	printf("test_multiple_creat test3.txt at block %i\n", open_files[success3]);
+	printf("test_multiple_creat test4.txt at block %i\n", open_files[success4]);
+}
+
 void test_my_write() {
 	printf("\ntest_my_write:\n");
 	if (my_mkdir("/foo") < 0) {
@@ -507,7 +526,10 @@ int main (char argc, char ** argv)  {
   
   /** TESTED - PASS **/
   test_my_creat();
-  
+
+  /** TESTED - ??? **/
+  test_multiple_creat();
+
   /** TESTED - PASS **/
   test_my_close();
   
