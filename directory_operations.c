@@ -1,5 +1,6 @@
 #include "directory_operations.h"
 
+#define DEBUG 1
 /* Used when creating a directory.  Returns the block number of the directory block in which
  * to place the new entry and the block number of the first free block available for the new
  * directory.
@@ -49,7 +50,9 @@ int parseAndCreateDirectory(const char * path, int rename_start_block, char flag
 		  return -1;
 	    }
 
-		printf("Renamed directory to %s\nAdded the entry at %d\twith name: %s, at block %d\n", path, parentDirectory, directory, rename_start_block);
+		if (DEBUG) {
+		  printf("Renamed directory to %s\nAdded the entry at %d\twith name: %s, at block %d\n", path, parentDirectory, directory, rename_start_block);
+		}
 
 	    return 0;
 	  }
@@ -90,8 +93,9 @@ int parseAndCreateDirectory(const char * path, int rename_start_block, char flag
 	  if ((parentDirectory = addEntry(directory, newBlockNum, parentDirectory)) < 0) {
 		return -1;
 	  }
-
-	  printf("Created directory at %s\nAdded the entry at %d\twith name: %s, at block %d\n", path, parentDirectory, directory, newBlockNum);
+	  if (DEBUG) {
+	    printf("Created directory at %s\nAdded the entry at %d\twith name: %s, at block %d\n", path, parentDirectory, directory, newBlockNum);
+	  }
 
 	  return 0;
 	}
@@ -275,7 +279,11 @@ void deleteDirectoryRecursively(int blockNum) {
 
     // Remove directory block from freeblock list
     deleteBlock(blockNum);
-	printf("Removed directory at block: %d\n", blockNum);
+
+	if (DEBUG) {
+	  printf("Removed directory block: %d\n", blockNum);
+	}
+
   }
   else {
     deleteDirectoryRecursively(nextBlock);
@@ -302,7 +310,10 @@ void deleteDirectoryRecursively(int blockNum) {
     }
     // Remove directory block from freeblock list
     deleteBlock(blockNum);
-	printf("Removed directory at block: %d\n", blockNum);
+
+	if (DEBUG) {
+	  printf("Removed directory block: %d\n", blockNum);
+	}
   }
 }
 
@@ -325,11 +336,21 @@ void deleteFileRecursively(int blockNum) {
   if (nextBlock == 0) {
     // flip the bit in the freeblock bitmap
     deleteBlock(blockNum);
+
+	if (DEBUG) {
+	  printf("Deleted file block %d\n", blockNum);
+	}
+
   }
   else {
     deleteFileRecursively(nextBlock);
     // flip the bit in the freeblock bitmap
     deleteBlock(blockNum);
+
+	if (DEBUG) {
+	  printf("Deleted file block %d\n", blockNum);
+	}
+
   }
 }
 

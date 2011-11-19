@@ -276,7 +276,7 @@ int write_to_block(const void * buf, int block_num, int pointer, int amount) {
 	  }
 	  setBlockInBitmapToStatus(1, next_block);
 
-	  // Initialize the header in the new block.
+	  // Initialize the header in the new block and write back the new block.
 	  if (initialize_header(next_block, 'f') < 0) {
 		return -1;
 	  }
@@ -289,10 +289,16 @@ int write_to_block(const void * buf, int block_num, int pointer, int amount) {
 	extraBlocks = 1;
 	// For every multiple of 1024 need another block for writing.
 	extraBlocks += (amount - (BLOCKSIZE - pointer)) / BLOCKSIZE;
+
+	buffer_ptr = buffer + pointer;
+    strncpy(buffer_ptr, buf_ptr, (BLOCKSIZE - pointer));
+  }
+  // Enough room in block for buf.
+  else {
+	buffer_ptr = buffer + pointer;
+	strncpy(buffer_ptr, buf_ptr, amount);
   }
 
-  buffer_ptr = buffer + pointer;
-  strncpy(buffer_ptr, buf_ptr, (BLOCKSIZE - pointer));
 
   // Trying to write in past the allocated amount
   if (pointer > bytes_allocated) {
@@ -321,8 +327,8 @@ int write_to_block(const void * buf, int block_num, int pointer, int amount) {
   }
 
   int i;
-  int track_amount = amount - amount_written_to_block;
-  buf = buf + amount_written_to_block;
+  int track_amount = amount - amount_written_to_block; //484
+  buf_ptr = (char *)buf + amount_written_to_block;
   int amount_to_write;
   int current_block = next_block;
 
@@ -380,7 +386,7 @@ int write_to_block(const void * buf, int block_num, int pointer, int amount) {
 	}
 
 	current_block = next_block;
-	buf = buf + amount_to_write;
+	buf_ptr = buf_ptr + amount_to_write;
   }
 
   return 0;

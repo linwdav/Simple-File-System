@@ -125,7 +125,7 @@ int my_write (int fd, const void * buf, int count)
   int pointer = open_files_current_position[fd];
   int num_blocks = pointer / BLOCKSIZE;
   int remainder = pointer % BLOCKSIZE;
-  
+
   // The block in which the pointer is pointing.
   if ((block_num = find_block_to_write_to(block_num, num_blocks)) < 0) {
 	return -1;
@@ -135,7 +135,20 @@ int my_write (int fd, const void * buf, int count)
 	return -1;
   }
 
+  // count is just the number of data bytes, current position also has to account for any
+  // new headers created when writing to the file.
+  int num_header_accounted_for = (pointer / BLOCKSIZE) + 1;
+
+  // First time writing to open file, therefore haven't accounted for any headers yet.
+  if (pointer == 0) {
+	num_header_accounted_for = 0;
+  }
+
   open_files_current_position[fd] += count;
+
+  num_blocks = (open_files_current_position[fd] / BLOCKSIZE) + 1;
+  int header_amount = (num_blocks - num_header_accounted_for) * HEADER_SIZE;
+  open_files_current_position[fd] += header_amount;
 
   return 0;
 }
@@ -371,4 +384,8 @@ void close_file_if_open(int block_num) {
 		  open_files[i] = 0;
 	  }
 	}
+}
+
+int get_associated_block_num(int fd) {
+  return open_files[fd];
 }

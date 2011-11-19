@@ -5,6 +5,7 @@
 #define DIRECTORY_BLOCK_1_NEXT_BLOCK 70
 #define DIRECTORY_BLOCK_1_1          80
 #define FILE_BLOCK_1                 100
+#define DEBUG						 0
 
 int size_of_disk;
 
@@ -240,6 +241,264 @@ void test_my_read() {
   
 }
 
+void test_my_write() {
+	printf("\ntest_my_write:\n");
+	if (my_mkdir("/foo") < 0) {
+	  printf("Failed at making directory /foo\n");
+	  exit(1);
+	}
+
+	if (my_mkdir("/foo/bar") < 0) {
+	  printf("Failed at making directory /foo/bar\n");
+	  exit(1);
+	}
+
+	int fd;
+	if ((fd = my_creat("/foo/bar/test.txt")) < 0) {
+	  printf("Failed at creating file /foo/bar/test.txt\n");
+	  exit(1);
+	}
+
+	int block_num = get_associated_block_num(fd);
+	printf("Created file at block number %d\n", block_num);
+
+	char string[101] = "abcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghij\0";
+	if (DEBUG) {
+	  printf("Writing string of length 100\n");
+	}
+
+	if (my_write(fd, string, 100) < 0) {
+	 printf("Failed to write string to file /foo/bar/test.txt\n");
+	 exit(1);
+	}
+
+	char buffer[1024];
+	if (read_block(block_num, buffer) < 0) {
+	  printf("Error reading block #%d\n", block_num);
+	  exit(1);
+	}
+
+	short bytesAllocated;
+	memcpy(&bytesAllocated, buffer + 1 + sizeof(int), sizeof(bytesAllocated));
+
+	if (DEBUG) {
+	  printf("bytes allocated: %d\n", bytesAllocated);
+	}
+
+	char * buffer_ptr = buffer + 8;
+	char data[101];
+	strncpy(data, buffer_ptr, 100);
+	data[100] = '\0';
+
+	if (strcmp(data, string) != 0) {
+	  printf("Error in reading back out data\n");
+	  exit(1);
+	}
+	if (DEBUG) {
+	  printf("Closing file %d\n", fd);
+	}
+
+	if (my_close(fd) < 0) {
+	  printf("Failed to close file %d\n", fd);
+	  exit(1);
+	}
+
+	if ((fd = my_open("/foo/bar/test.txt")) < 0) {
+	  printf("Failed to open file /foo/bar/test.txt\n");
+	  exit(1);
+	}
+	if (DEBUG) {
+	  printf("Opened file %d\n", fd);
+	}
+
+	char string2[50] = "jihgfedcbajihgfedcbajihgfedcbajihgfedcbajihgfedcba";
+	if (DEBUG) {
+	  printf("Writing string of length 50\n");
+	}
+
+	strncpy(string, string2, 50);
+	if (my_write(fd, string2, 50) < 0) {
+	  printf("Failed to write string2 to /foo/bar/test.txt\n");
+	  exit(1);
+	}
+
+	block_num = get_associated_block_num(fd);
+	if (read_block(block_num, buffer) < 0) {
+	  printf("Error reading block #%d\n", block_num);
+	  exit(1);
+	}
+
+	memcpy(&bytesAllocated, buffer + 1 + sizeof(int), sizeof(bytesAllocated));
+	if (DEBUG) {
+	  printf("bytes allocated: %d\n", bytesAllocated);
+	}
+
+	buffer_ptr = buffer + HEADER_SIZE;
+	memset(data, '\0', strlen(data));
+	strncpy(data, buffer_ptr, 101);
+
+	if (strcmp(data, string) != 0) {
+	  printf("Error in reading back out data\n");
+	  exit(1);
+	}
+	if (DEBUG) {
+	  printf("Closing file %d\n", fd);
+	}
+
+	if (my_close(fd) < 0) {
+	  printf("Failed to close file %d\n", fd);
+	  exit(1);
+	}
+
+	if ((fd = my_open("/foo/bar/test.txt")) < 0) {
+	  printf("Failed to open file /foo/bar/test.txt\n");
+	  exit(1);
+	}
+	if (DEBUG) {
+	  printf("Opened file %d\n", fd);
+	}
+
+	block_num = get_associated_block_num(fd);
+
+	char alphabet[26] = "abcdefghijlkmnopqrstuvwxyz";
+	char longString[1501];
+	int i;
+	for (i = 0; i < 1500; i++) {
+	  longString[i] = alphabet[(i % 26)];
+	}
+	longString[1500] = '\0';
+
+	if (DEBUG) {
+	  printf("Writing string of length 1500\n");
+	}
+
+	if (my_write(fd, longString, 1500) < 0) {
+	  printf("Failed to write string2 to /foo/bar/test.txt\n");
+	  exit(1);
+	}
+
+	if (read_block(block_num, buffer) < 0) {
+	  printf("Error reading block #%d\n", block_num);
+	  exit(1);
+	}
+
+	memcpy(&bytesAllocated, buffer + 1 + sizeof(int), sizeof(bytesAllocated));
+	if (DEBUG) {
+	  printf("bytes allocated in first block excluding header: %d\n", (bytesAllocated - HEADER_SIZE));
+	}
+
+	if (bytesAllocated != 1024) {
+	 printf("Error allocated %d bytes\n", bytesAllocated);
+	}
+
+	int next_block;
+	memcpy(&next_block, buffer + 1, sizeof(next_block));
+
+	if (next_block == 0) {
+	 printf("Didn't properly create a new block.\n");
+	 exit(1);
+	}
+	else {
+	  printf("Created new file block at block %d, when writing\n", next_block);
+	}
+
+	char new_buffer[1024];
+	if (read_block(next_block, new_buffer) < 0) {
+	  printf("Error reading block #%d\n", next_block);
+	  exit(1);
+	}
+
+	short newBytesAllocated;
+	memcpy(&newBytesAllocated, new_buffer + 1 + sizeof(int), sizeof(newBytesAllocated));
+	if (DEBUG) {
+	  printf("Number of bytes allocated in second block excluding header: %d\n", (newBytesAllocated - HEADER_SIZE));
+	  printf("Total number of bytes allocated from string of length 1500: %d\n", (bytesAllocated + newBytesAllocated - (2 * HEADER_SIZE)));
+	}
+
+	char longData[1501];
+	buffer_ptr = buffer + HEADER_SIZE;
+	strncpy(longData, buffer_ptr, (bytesAllocated - HEADER_SIZE));
+	char * longData_ptr = longData + (bytesAllocated - HEADER_SIZE);
+	char * new_buffer_ptr = new_buffer + HEADER_SIZE;
+	strncpy(longData_ptr, new_buffer_ptr, (newBytesAllocated - HEADER_SIZE));
+	longData[1500] = '\0';
+
+	if (strcmp(longString, longData) != 0) {
+	  printf("Error in writing data\n");
+	  exit(1);
+	}
+
+	char longerString[1601];
+	for (i = 0; i < 1600; i++) {
+      if (i < 1500) {
+	    longerString[i] = longString[i];
+	  }
+	  else {
+		longerString[i] = string[(i - 1500)];
+	  }
+	}
+	longerString[1600] = '\0';
+
+	if (DEBUG) {
+	  printf("Appending string of length 100 to open file %d\n", fd);
+	}
+
+	if (my_write(fd, string, 100) < 0) {
+	  printf("Failed to write string2 to /foo/bar/test.txt\n");
+	  exit(1);
+	}
+
+	if (read_block(block_num, buffer) < 0) {
+	  printf("Error reading block #%d\n", block_num);
+	  exit(1);
+	}
+
+	buffer_ptr = buffer + 1;
+	memcpy(&next_block, buffer_ptr, sizeof(next_block));
+
+	if (read_block(next_block, buffer) < 0) {
+	  printf("Error reading block #%d\n", block_num);
+	  exit(1);
+	}
+
+	buffer_ptr = buffer + 1 + sizeof(next_block);
+	memcpy(&bytesAllocated, buffer_ptr, sizeof(bytesAllocated));
+
+	if (bytesAllocated != (newBytesAllocated + 100)) {
+	  printf("Error not enough bytes allocated\n");
+	  exit(1);
+	}
+
+	if (DEBUG) {
+	  printf("bytes allocated in block appended too excluding header: %d\n", (bytesAllocated - HEADER_SIZE));
+	}
+
+	buffer_ptr = buffer + newBytesAllocated;
+	memset(data, '\0', 100);
+	strncpy(data, buffer_ptr, 100);
+	data[100] = '\0';
+
+	if (strcmp(data, string) != 0) {
+	  printf("Error in writing to already written to file that wasn't closed.\n");
+	  exit(1);
+	}
+
+	if (DEBUG) {
+	  printf("Recursively removing directory /foo and all it's contents\n");
+	}
+
+	if (my_rmdir("/foo") < 0) {
+	  printf("Failed at removing directory /foo\n");
+	  exit(1);
+	}
+
+	block_num = get_associated_block_num(fd);
+	if (block_num != 0) {
+	 printf("Error file still seen as open\n");
+	 exit(1);
+	}
+}
+
 int main (char argc, char ** argv)  {
   test_file_operations_setup();
   
@@ -254,6 +513,9 @@ int main (char argc, char ** argv)  {
   
   /** TESTED - PASS **/
   test_my_open();
+
+  /** TESTED - PASS **/
+  test_my_write();
   
   test_my_read();
   
