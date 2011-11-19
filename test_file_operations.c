@@ -249,8 +249,8 @@ void test_my_creat() {
   
   // Check if file exists already
   unsigned int directory_block_num = get_path_block_num("/foo2/");
-  unsigned int filename_found = search_directory_block_for_name("hello2.txt", directory_block_num);
-  if ( filename_found == 0) {
+  int filename_found = search_directory_block_for_name("hello2.txt", directory_block_num);
+  if ( filename_found < 0) {
     printf("\ntest_my_creat: file does not exist yet.\n");
   }
   else {
@@ -261,8 +261,8 @@ void test_my_creat() {
   int fd = my_creat(path);
     
   // Check to ensure that the filename has been added to it's directory
-  unsigned int block_found = search_directory_block_for_name("hello2.txt", directory_block_num);
-  if ( block_found == 0) {
+  int block_found = search_directory_block_for_name("hello2.txt", directory_block_num);
+  if ( block_found < 0) {
     printf("test_my_creat: FAILED.  File not added to directory.\n");
     my_creat_result = 0;
   }

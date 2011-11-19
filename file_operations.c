@@ -13,7 +13,7 @@ int get_file_block_and_header_information(char * buffer, unsigned int file_block
 int add_entry_to_directory(unsigned int directory_block_num, char * entry_name, unsigned int entry_block_num) {
   
   // Check directory to ensure that the entry name does not already exist (-1 = not found)
-  if (search_directory_block_for_name(entry_name, directory_block_num) == 0) {
+  if (search_directory_block_for_name(entry_name, directory_block_num) < 0) {
     unsigned int last_block = directory_block_num;
     
     char buffer[BLOCKSIZE];
@@ -112,7 +112,7 @@ void populate_file_header(char * buffer, unsigned int next_block, unsigned short
  * block in the directory or return -1 if nothing is found and the entire
  * directory has been searched.
  */
-unsigned int search_directory_block_for_name(char * name, unsigned int directory_block_num) {
+int search_directory_block_for_name(char * name, unsigned int directory_block_num) {
    // Return value
    int block_num_of_name;
    
@@ -128,7 +128,7 @@ unsigned int search_directory_block_for_name(char * name, unsigned int directory
    
    // Ensure that there are file listings in this block
    if ((bytes_allocated - HEADER_SIZE) % FILE_NUM_PAIRINGS_SIZE != 0) {
-     return 0;
+     return -1;
    }
    // Determine how many entries are in this directory block. 
    int num_iterations = (bytes_allocated - HEADER_SIZE) / FILE_NUM_PAIRINGS_SIZE;
@@ -154,11 +154,15 @@ unsigned int search_directory_block_for_name(char * name, unsigned int directory
    }
    // If this is the last block, then the entry is not in this directory.
    else {
-     return 0;
+     return -1;
    }
 } // end search_directory_for_name
 
 int get_path_block_num (const char * path) {
+	if (strcmp ("", path) == 0) {
+		return 0;
+	}
+	
   // Copy path into a buffer
   char path_buffer[strlen(path) + 1];
   strcpy(path_buffer, path);
@@ -201,6 +205,10 @@ int get_path_block_num_recursive (char * path, unsigned int current_directory_bl
     
     int next_directory_block_num = 
       search_directory_block_for_name(next_name, current_directory_block_num);
+    
+    if (next_directory_block_num < 0) {
+			return -1;
+    }
     
     return get_path_block_num_recursive(++ptr_next_separator, next_directory_block_num);
   } // End if

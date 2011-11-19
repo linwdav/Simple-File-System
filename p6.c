@@ -24,6 +24,10 @@ unsigned int open_files_current_position[MAX_OPEN_FILES];
 int my_open (const char * path)
 {
   int block_num = get_path_block_num(path);
+
+  if (block_num < 0) {
+		return -1;
+  }
   
   int i;
   for (i = 0; i < MAX_OPEN_FILES; i++) {
@@ -64,7 +68,7 @@ int my_creat (const char * path)
   path_buffer[separator - path] = '\0';
 
   // Get directory file block number
-  unsigned int directory_block_num = get_path_block_num(path_buffer);
+  int directory_block_num = get_path_block_num(path_buffer);
   
   // If directory does not exist, then set return value to -1 (error)
   if (directory_block_num < 0) {
