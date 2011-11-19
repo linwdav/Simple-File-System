@@ -106,6 +106,11 @@ int my_read (int fd, void * buf, int count)
   // Check to ensure that the file descriptor is valid
   if (current_block_num == 0) {
     // If file is not open, then return error value.
+		perror("my_read error: file descriptor %i invalid", fd);
+		return -1;
+  }
+  if (fd < 0) {
+		perror("my_read error: file not open");
 		return -1;
   }
 
