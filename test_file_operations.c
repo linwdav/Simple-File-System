@@ -108,6 +108,39 @@ void test_file_operations_setup() {
   setBlockInBitmapToStatus (1, DIRECTORY_BLOCK_1_1);
 }
 
+void test_my_read() {
+  // Create file /foo2/read-test.txt
+	int fd = my_creat("/foo2/read-test.txt");
+	
+	int block_num = open_files[fd];
+	
+	// Buffer to store data to write to file
+	char buffer[BLOCKSIZE];
+	char *buffer_ptr = buffer;
+	
+	*buffer_ptr = 'f';
+	int next_block = requestNextFreeBlock();
+  setBlockInBitmapToStatus(1, next_block);
+	
+	// Write first block of file
+	short bytes_allocated = HEADER_SIZE + 20;
+  memcpy(++buffer_ptr, &next_block, BYTES_IN_INT);
+	buffer_ptr += BYTES_IN_INT;
+	memcpy(buffer_ptr, &bytes_allocated, BYTES_IN_SHORT);
+	buffer_ptr += BYTES_IN_SHORT;
+	char data[] = "1234567890abcdefghij";
+	memcpy(buffer_ptr, data, 20);
+	write_block(block_num, buffer);
+	
+	// Write second (last) block of file
+	block_num = next_block;
+	next_block = ROOT_BLOCK;
+	
+	
+	char buf[BLOCKSIZE * 4];
+	
+	
+}
 
 void test_search_directory_block_for_name() {
   // OPTIONAL.  Already tested via gdb
@@ -235,10 +268,6 @@ void test_my_close () {
   else {
     printf("\ntest_my_close: FAILED\n");
   }
-}
-
-void test_my_read() {
-  
 }
 
 void test_multiple_creat() {
@@ -663,6 +692,7 @@ int main (char argc, char ** argv)  {
   /** TESTED - PASS **/
   test_my_remove();
   
+  /** TESTED - ??? **/
   test_my_read();
   
   return 0;
