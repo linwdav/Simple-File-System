@@ -114,31 +114,65 @@ void test_my_read() {
 	
 	int block_num = open_files[fd];
 	
+	printf("\ntest_my_read: file created at block %i\n", block_num);
+	
 	// Buffer to store data to write to file
 	char buffer[BLOCKSIZE];
 	char *buffer_ptr = buffer;
 	
-	*buffer_ptr = 'f';
 	int next_block = requestNextFreeBlock();
   setBlockInBitmapToStatus(1, next_block);
+
+	printf("test_my_read: file 2nd block created at block %i\n", next_block);
 	
 	// Write first block of file
 	short bytes_allocated = HEADER_SIZE + 20;
+	*buffer_ptr = 'f';
   memcpy(++buffer_ptr, &next_block, BYTES_IN_INT);
 	buffer_ptr += BYTES_IN_INT;
 	memcpy(buffer_ptr, &bytes_allocated, BYTES_IN_SHORT);
 	buffer_ptr += BYTES_IN_SHORT;
 	char data[] = "1234567890abcdefghij";
+	buffer_ptr = buffer;
+	buffer_ptr += HEADER_SIZE;
 	memcpy(buffer_ptr, data, 20);
 	write_block(block_num, buffer);
 	
 	// Write second (last) block of file
 	block_num = next_block;
 	next_block = ROOT_BLOCK;
+	bytes_allocated = HEADER_SIZE + 10;
 	
+	memset(buffer, 0, BLOCKSIZE);
+	buffer_ptr = buffer;
+	*buffer_ptr = 'f';
+  memcpy(++buffer_ptr, &next_block, BYTES_IN_INT);
+	buffer_ptr += BYTES_IN_INT;
+	memcpy(buffer_ptr, &bytes_allocated, BYTES_IN_SHORT);
+	buffer_ptr += BYTES_IN_SHORT;
+	char data2[] = "yyyyyzzzzz";
+	buffer_ptr = buffer;
+	buffer_ptr += HEADER_SIZE;
+	memcpy(buffer_ptr, data2, 10);
+	write_block(block_num, buffer);
 	
 	char buf[BLOCKSIZE * 4];
+	memset(buf, 0, BLOCKSIZE * 4);
+	my_close(fd);
 	
+	// This should produce an error
+	int result = my_read(fd, buf, 25);
+	
+	if (result != -1) {
+		printf("my_test_read: FAILED (should not read closed file).\n");
+	}
+	
+	fd = my_open("/foo2/read-test.txt");
+	int num_bytes_requested = 11;
+	result = my_read(fd, buf, num_bytes_requested);
+	buf[num_bytes_requested] = '\0';
+	
+	printf("%i bytes read.  Data read: %s\n", result, buf);
 	
 }
 
