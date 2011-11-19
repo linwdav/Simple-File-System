@@ -91,31 +91,110 @@ int my_creat (const char * path)
 /* sequentially read from a file */
 int my_read (int fd, void * buf, int count)
 {
+	// Ptr to track where we are in buf
+	char * buf_ptr = buf;
+	
   // Returns number of bytes read.
-  int return_value = 0;
+  int bytes_read = 0;
   
   // Total number of bytes available to store data in each block.
   int valid_bytes_in_block = BLOCKSIZE - HEADER_SIZE;
   
   unsigned int current_block_num = open_files[fd];
+  unsigned int current_position = open_files_current_position[fd];
   
   // Check to ensure that the file descriptor is valid
-  if (current_block_num != 0) {
-    
-    unsigned int next_block;
-    unsigned int bytes_allocated;
-    
-    // Read in header data from current block number
-    // Continue to loop and read in data to buf while count > bytes_allocated
-    // Then read in remainder of bytes into buf.
-    // Return if count is too big and the EOF has been reached.
+  if (current_block_num == 0) {
+    // If file is not open, then return error value.
+		return -1;
   }
-  // If file is not open, then return error value.
-  else {
-    return_value = -1;
-  }
+
+  // Header file information containers
+  unsigned int next_block;
+  unsigned short bytes_allocated;
+  char buffer[BLOCKSIZE];  
+
+  int exit_loop = 0;
   
-  return return_value;
+  // Find the block where the current position is.
+  while (current_block_num != 0 && current_position > 0 && exit_loop == 0) {
+
+    // Read in header data from current block number
+  	get_file_block_and_header_information(buffer, current_block_num, &next_block, &bytes_allocated);
+
+    // If the bytes allocated in this block is more than the current position, then this is the block
+    // to start reading at.
+    if (bytes_allocated >= current_position) {
+	  	exit_loop = 1;
+    }	
+    else {
+			current_position -= bytes_allocated;
+    }
+  } // End while
+
+  // If the loop did not exit properly, then this means current position is incorrect (too large for file)
+  if (exit_loop == 0) {
+		return -1;
+  }
+  // start reading at the current_position in the current block.
+  
+  // Read in header data from current block number
+ 	get_file_block_and_header_information(buffer, current_block_num, &next_block, &bytes_allocated);
+	
+  // Loop until we get to the last block to read from
+  while (current_block_num != 0 && count > bytes_allocated) {
+	
+	  // Calculate how many bytes are read in this block
+		int bytes_read_this_block = bytes_allocated - current_position;  
+	
+	  // Read all bytes in starting at current_position until the end of the block.
+		memcpy(buf_ptr, &buffer[current_position], bytes_read_this_block);
+		
+		// update buf_ptr and open_files_current_position
+		buf_ptr += bytes_read_this_block;
+		open_files_current_position[fd] += bytes_read_this_block;
+		bytes_read += bytes_read_this_block;
+		
+		// Need to decrement the byte count to read.  Account for if the header has been read in.
+		// Header does not count towards data read in.
+		if (current_position > HEADER_SIZE) {
+			count -= bytes_allocated;
+		}
+		else {
+			count -= bytes_allocated + HEADER_SIZE;	
+		}
+		
+		// Go to next block
+		current_block_num = next_block;
+		
+		// Reset position ptr in block to the start of the next block.
+		current_position = 0;
+		
+		// Load information from next block as long as more bytes need to be read in and we're not at the last
+		// block in the file.
+		if (current_block_num != 0 && count > 0) {
+		  get_file_block_and_header_information(buffer, current_block_num, &next_block, &bytes_allocated);
+ 	  } 
+    // If count > 0, and the next block == 0, that means there is too much to read.  Just return the
+    // amount we were able to read.  Could also be that this is the last block and count == 0.  just return 
+    // as well.
+    else {
+			return bytes_read;
+    }
+  } // End while
+
+  // Handle remainder of bytes
+  if (count > 0) {
+	  
+	  // Read all bytes in starting at current_position until the end of the block.
+		memcpy(buf_ptr, &buffer[current_position], count);
+		
+		// update bytes_read and open_files_current_position
+		open_files_current_position[fd] += count;
+		bytes_read += count;
+  }  
+
+	return bytes_read;
 }
 
 /* sequentially write to a file */
