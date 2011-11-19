@@ -150,7 +150,7 @@ void test_my_read() {
 	buffer_ptr += BYTES_IN_INT;
 	memcpy(buffer_ptr, &bytes_allocated, BYTES_IN_SHORT);
 	buffer_ptr += BYTES_IN_SHORT;
-	char data2[] = "yyyyyzzzzz";
+	char data2[] = "ABCDEFGHIJ";
 	buffer_ptr = buffer;
 	buffer_ptr += HEADER_SIZE;
 	memcpy(buffer_ptr, data2, 10);
@@ -161,6 +161,7 @@ void test_my_read() {
 	my_close(fd);
 	
 	// This should produce an error
+	printf("my_test_read: should produce error below.\n");
 	int result = my_read(fd, buf, 25);
 	
 	if (result != -1) {
@@ -168,12 +169,61 @@ void test_my_read() {
 	}
 	
 	fd = my_open("/foo2/read-test.txt");
-	int num_bytes_requested = 11;
+	int num_bytes_requested = 23;
 	result = my_read(fd, buf, num_bytes_requested);
 	buf[num_bytes_requested] = '\0';
 	
-	printf("%i bytes read.  Data read: %s\n", result, buf);
+	if (strcmp(buf, "1234567890abcdefghijABC") == 0) {
+	  printf("my_test_read: PASSED 1. %i bytes read.  Data read: %s\n", result, buf);
+  }
+  else {
+		printf("my_test_read: FAILED 1.\n");
+  }
+
+	num_bytes_requested = 5;
+	result = my_read(fd, buf, num_bytes_requested);
+	buf[num_bytes_requested] = '\0';
+	if (strcmp(buf, "DEFGH") == 0) {
+	  printf("my_test_read: PASSED 2. %i bytes read.  Data read: %s\n", result, buf);
+  }
+  else {
+		printf("my_test_read: FAILED 2.\n");
+  }	
+	my_close(fd);
 	
+	fd = my_open("/foo2/read-test.txt");
+	num_bytes_requested = 2;
+	result = my_read(fd, buf, num_bytes_requested);
+	buf[num_bytes_requested] = '\0';
+	
+	if (strcmp(buf, "12") == 0) {
+	  printf("my_test_read: PASSED 3. %i bytes read.  Data read: %s\n", result, buf);
+  }
+  else {
+		printf("my_test_read: FAILED 3.\n");
+  }
+
+	num_bytes_requested = 20;
+	result = my_read(fd, buf, num_bytes_requested);
+	buf[num_bytes_requested] = '\0';
+	
+	if (strcmp(buf, "34567890abcdefghijAB") == 0) {
+	  printf("my_test_read: PASSED 4. %i bytes read.  Data read: %s\n", result, buf);
+  }
+  else {
+		printf("my_test_read: FAILED 4.\n");
+  }
+
+	num_bytes_requested = 20;
+	result = my_read(fd, buf, num_bytes_requested);
+	buf[result] = '\0';
+	
+	if (strcmp(buf, "CDEFGHIJ") == 0) {
+	  printf("my_test_read: PASSED 5. %i bytes read.  Data read: %s\n", result, buf);
+  }
+  else {
+		printf("my_test_read: FAILED 5.\n");
+  }
 }
 
 void test_search_directory_block_for_name() {

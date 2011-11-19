@@ -134,6 +134,7 @@ int my_read (int fd, void * buf, int count)
     }	
     else {
 			current_position -= bytes_allocated;
+			current_block_num = next_block;
     }
   } // End while
 
@@ -146,28 +147,36 @@ int my_read (int fd, void * buf, int count)
   // Read in header data from current block number
  	get_file_block_and_header_information(buffer, current_block_num, &next_block, &bytes_allocated);
 	
+	// Data remaining between current position and end of block
+	int data_bytes_remaining;
+	
+	if (current_position >= HEADER_SIZE) {
+		data_bytes_remaining = bytes_allocated - current_position;
+	}
+	else {
+		data_bytes_remaining = bytes_allocated - current_position - HEADER_SIZE;
+	}
+	
   // Loop until we get to the last block to read from
-  while (current_block_num != 0 && count > bytes_allocated) {
+  while (current_block_num != 0 && count >= data_bytes_remaining) {
 	
 	  // Calculate how many bytes are read in this block
-		int bytes_read_this_block = bytes_allocated - current_position;  
+		int bytes_read_this_block = bytes_allocated - current_position;
+		
+		if (current_position < HEADER_SIZE) {
+			current_position = HEADER_SIZE;
+		}  
 	
 	  // Read all bytes in starting at current_position until the end of the block.
 		memcpy(buf_ptr, &buffer[current_position], bytes_read_this_block);
 		
 		// update buf_ptr and open_files_current_position
-		buf_ptr += bytes_read_this_block;
+		buf_ptr += data_bytes_remaining;
 		open_files_current_position[fd] += bytes_read_this_block;
-		bytes_read += bytes_read_this_block;
+		bytes_read += data_bytes_remaining;
 		
-		// Need to decrement the byte count to read.  Account for if the header has been read in.
-		// Header does not count towards data read in.
-		if (current_position > HEADER_SIZE) {
-			count -= bytes_allocated;
-		}
-		else {
-			count -= bytes_allocated + HEADER_SIZE;	
-		}
+		// Need to decrement the byte count to read. 
+		count -= data_bytes_remaining;
 		
 		// Go to next block
 		current_block_num = next_block;
@@ -186,16 +195,30 @@ int my_read (int fd, void * buf, int count)
     else {
 			return bytes_read;
     }
+
+		data_bytes_remaining = bytes_allocated;
   } // End while
 
   // Handle remainder of bytes
   if (count > 0) {
+	
+	
+		int new_current_position = current_position;
+		
+		if (current_position < HEADER_SIZE) {
+			new_current_position = HEADER_SIZE;
+		}
 	  
-	  // Read all bytes in starting at current_position until the end of the block.
-		memcpy(buf_ptr, &buffer[current_position], count);
+	  // Read all bytes in starting at current_position until the end of count
+		memcpy(buf_ptr, &buffer[new_current_position], count);
 		
 		// update bytes_read and open_files_current_position
-		open_files_current_position[fd] += count;
+		if (current_position < HEADER_SIZE) {
+		  open_files_current_position[fd] += count + HEADER_SIZE;
+	  }
+	  else {
+			open_files_current_position[fd] += count;
+	  }
 		bytes_read += count;
   }  
 
