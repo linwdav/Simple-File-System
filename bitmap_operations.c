@@ -127,7 +127,7 @@ int setBlockInBitmapToStatus (int status, int blockNumber)
   int byteIndex = bitIndexWithinBlock / BITS_IN_BYTE;
 
   // Find the index of the bit within the byte. For example, the bit at index
-  // 6 for 1011 1111 is 0.
+  // 6 for 1111 1101 is 0.
   int bitIndexWithinByte = blockToFree % BITS_IN_BYTE;
 
   // Actual index is from right to left. For example, flipping the bit at index 7
@@ -137,10 +137,18 @@ int setBlockInBitmapToStatus (int status, int blockNumber)
   // Set the bit
   if (status == 0) {
     // Set to 0
+    int bit = (buffer[byteIndex]>>actualIndex)&1;
+    if (bit == 0) {
+      printf("Warning. Trying to free block %d when it is already free.\n", blockNumber);
+    }
     buffer[byteIndex] = buffer[byteIndex]&=~(1<<actualIndex);
   }
   else if (status == 1) {
     // Set to 1
+    int bit = (buffer[byteIndex]>>actualIndex)&1;
+    if (bit == 1) {
+      printf("File system error. Trying to rewrite block %d when it is in use by another file.\n", blockNumber);
+    }
     buffer[byteIndex] = buffer[byteIndex]|=(1<<actualIndex);
   }
 
