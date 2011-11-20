@@ -147,7 +147,7 @@ int setBlockInBitmapToStatus (int status, int blockNumber)
     // Set to 1
     int bit = (buffer[byteIndex]>>actualIndex)&1;
     if (bit == 1) {
-      printf("File system error. Trying to rewrite block %d when it is in use by another file.\n", blockNumber);
+      printf("File system error. Trying to write to block %d when it is in use by another file.\n", blockNumber);
     }
     buffer[byteIndex] = buffer[byteIndex]|=(1<<actualIndex);
   }
