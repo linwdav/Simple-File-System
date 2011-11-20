@@ -200,7 +200,7 @@ int my_read (int fd, void * buf, int count)
 			return bytes_read;
     }
 
-		data_bytes_remaining = bytes_allocated;
+		data_bytes_remaining = bytes_allocated - HEADER_SIZE;
   } // End while
 
   // Handle remainder of bytes
