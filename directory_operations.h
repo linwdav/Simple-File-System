@@ -11,7 +11,7 @@
 #define FILENAME_SIZE 200
 
 int parseAndCreateDirectory(const char * path, int rename_start_block, char flag);
-char * parseRemoveNums(const char * path, int blockNums[2], char flag);
+char * parseRemoveNums(const char * path, int blockNums[2]);
 int findNextBlockNum(char * filename, int blockNums[2]);
 int deleteDirectoryRecursively(int blockNum);
 int deleteFileRecursively(int blockNum);

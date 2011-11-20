@@ -248,20 +248,18 @@ int my_write (int fd, const void * buf, int count)
 
   // count is just the number of data bytes, current position also has to account for any
   // new headers created when writing to the file.
-  int num_header_accounted_for = (pointer / BLOCKSIZE) + 1;
-
-  // First time writing to open file, therefore haven't accounted for any headers yet.
-  if (pointer == 0) {
-	num_header_accounted_for = 0;
-  }
 
   open_files_current_position[fd] += count;
 
-  num_blocks = (open_files_current_position[fd] / BLOCKSIZE) + 1;
-  int header_amount = (num_blocks - num_header_accounted_for) * HEADER_SIZE;
+  int whole_blocks = count - (BLOCKSIZE - remainder); // Minus off amount written to partial block.
+  if (whole_blocks < 0) {
+	return count;
+  }
+  num_blocks = (whole_blocks / (BLOCKSIZE - HEADER_SIZE)) + 1;
+  int header_amount = num_blocks * HEADER_SIZE;
   open_files_current_position[fd] += header_amount;
 
-  return 0;
+  return count;
 }
 
 int my_close (int fd)
@@ -283,7 +281,7 @@ int my_remove (const char * path)
 
   // Get the filename of file to remove as well as block number of directory file is in, and
   // the root block number of the file as well.
-  filename = parseRemoveNums(path, block_nums, 'f');
+  filename = parseRemoveNums(path, block_nums);
   if (block_nums[1] == -1) {
 	return -1;
   }
@@ -322,7 +320,8 @@ int my_rename (const char * old, const char * new)
   char * oldFile;
 
   // find the block number of where the old entry is.
-  oldFile = parseRemoveNums(old, blockNums, 'r');
+  oldFile = parseRemoveNums(old, blockNums);
+
   if (blockNums[1] == -1) {
     return -1;
   }
@@ -357,7 +356,7 @@ int my_rmdir (const char * path)
   int blockNums[2];
   char * filename;
 
-  filename = parseRemoveNums(path, blockNums, 'r');
+  filename = parseRemoveNums(path, blockNums);
   if (blockNums[1] == -1 || filename == NULL) {
     return -1;
   }

@@ -111,13 +111,10 @@ int parseAndCreateDirectory(const char * path, int rename_start_block, char flag
 	// Ex. first iteration: token = foo/bar, nextToken = /bar, directory = foo
 	// After update: token = bar, nextToken = NULL, directory = bar
 	// So now we know bar is the directory to be added since it was the last part of the path (i.e. nextToken = NULL)
-	// memset(nextToken, '\0', strlen(nextToken));
-	// memset(directory, '\0', FILENAME_SIZE);
 	token = strchr(token, '/') + 1;
 	nextToken = strchr(token, '/');
 	if (nextToken == NULL) {
 	  strcpy(directory, token);
-	  directory[strlen(token)] = '\0';
 	}
 	else {
 	  strncpy(directory, token, nextToken - token);
@@ -130,7 +127,7 @@ int parseAndCreateDirectory(const char * path, int rename_start_block, char flag
  * the last file in the path.  Ex. /foo/bar/hello.txt would return the block numbers for the
  * directory bar and first block in hello.txt.
  */
-char * parseRemoveNums(const char * path, int blockNums[2], char flag) {
+char * parseRemoveNums(const char * path, int blockNums[2]) {
   blockNums[0] = 0;
 
   char * token = strchr(path, '/') + 1;
@@ -138,13 +135,11 @@ char * parseRemoveNums(const char * path, int blockNums[2], char flag) {
   char * directory = malloc(strlen(token) * sizeof(char));
   if (nextToken == NULL) {
 	  strcpy(directory, token);
-	  directory[strlen(token)] = '\0';
   }
   else {
     strncpy(directory, token, nextToken - token);
 	directory[nextToken - token] = '\0';
   }
-  char buffer[BLOCKSIZE];
 
   while (token != NULL) {
     if (findNextBlockNum(directory, blockNums) < 0) {
@@ -171,15 +166,6 @@ char * parseRemoveNums(const char * path, int blockNums[2], char flag) {
 	  blockNums[0] = blockNums[1];
 	}
 
-	if (read_block(blockNums[1], buffer) < 0) {
-	  printf("Error reading block #%d\n", blockNums[1]);
-      return NULL;
-	}
-
-	if (buffer[0] != 'd' && flag == 'r') {
-      blockNums[1] = -1;
-      return NULL;
-	}
   }
 
   return directory;
@@ -197,7 +183,6 @@ int findNextBlockNum(char *filename, int blockNums[2]) {
 	}
 
 	char *buffer_ptr = buffer + 1;
-	int blockNum;
 
 	int nextBlock;
 	memcpy(&nextBlock, buffer_ptr, sizeof(nextBlock));
@@ -219,7 +204,6 @@ int findNextBlockNum(char *filename, int blockNums[2]) {
 
 	  loops--;
 	  buffer_ptr = buffer_ptr + FILE_NUM_PAIRINGS_SIZE;
-	  memset(name, '\0', FILENAME_SIZE);
 	}
 	blockNums[1] = -1;
 
@@ -615,9 +599,10 @@ int updateParentDirectoryNum(char directory[FILENAME_SIZE], int parentDirectory)
   // No next block, so if not in this block return an error.
   if (nextBlock == 0) {
 	  while (loops != 0) {
-		char name[FILENAME_SIZE];
+		char name[FILENAME_SIZE + 1];
 
 		strncpy(name, buffer_ptr, FILENAME_SIZE);
+		name[FILENAME_SIZE] = '\0';
 
 		if (strcmp(name, directory) == 0) {
 		  int associatedNum;
@@ -642,9 +627,10 @@ int updateParentDirectoryNum(char directory[FILENAME_SIZE], int parentDirectory)
 
 	// Wasn't in other blocks so check this one.
 	while (loops != 0) {
-	  char name[FILENAME_SIZE];
+	  char name[FILENAME_SIZE + 1];
 
 	  strncpy(name, buffer_ptr, FILENAME_SIZE);
+	  name[FILENAME_SIZE] = '\0';
 
 	  if (strcmp(name, directory) == 0) {
 		int associatedNum;
@@ -832,9 +818,13 @@ int update_directory_blocks(char * dir, int blocks[2]) {
 	    return -1;
 	  }
 
+	  int next_block;
+	  memcpy(&next_block, buffer_one + 1, sizeof(next_block));
+
 	  short loop_bytes;
 	  memcpy(&loop_bytes, buffer_zero + 1 + sizeof(int), sizeof(loop_bytes));
 	  int loops = loop_bytes / FILE_NUM_PAIRINGS_SIZE;
+
 	  int i;
 	  char * buf_zero_ptr = buffer_zero + HEADER_SIZE;
 	  for (i = 0; i < loops; i++) {
@@ -847,6 +837,10 @@ int update_directory_blocks(char * dir, int blocks[2]) {
 			memcpy(&num, buf_zero_ptr + FILENAME_SIZE, sizeof(num));
 
 			if (num == blocks[1]) {
+			  if (next_block == 0) {
+				return 0;
+			  }
+			  memcpy(buf_zero_ptr + FILENAME_SIZE, &next_block, sizeof(next_block));
 			  return 0;
 			}
 		  }
@@ -854,8 +848,6 @@ int update_directory_blocks(char * dir, int blocks[2]) {
 		  buf_zero_ptr = buf_zero_ptr + FILE_NUM_PAIRINGS_SIZE;
 	  }
 
-	  int next_block;
-	  memcpy(&next_block, buffer_one + 1, sizeof(next_block));
 	  memcpy(buffer_zero + 1, &next_block, sizeof(next_block));
 
 	  if (write_block(blocks[0], buffer_zero) < 0) {
