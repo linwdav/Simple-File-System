@@ -255,7 +255,7 @@ int find_block_to_write_to(int start_block, int num_blocks) {
  * pointer - Place in block to begin writing too.
  * amount - The amount to write.
  */
-int write_to_block(const void * buf, int block_num, int pointer, int amount) {
+int write_to_block(const void * buf, unsigned int block_num, int pointer, int amount) {
   char buffer[BLOCKSIZE];
 
   if (read_block(block_num, buffer) < 0) {
@@ -266,10 +266,10 @@ int write_to_block(const void * buf, int block_num, int pointer, int amount) {
   char * buffer_ptr = buffer + 1;
   char * buf_ptr = (char *)buf;
 
-  int next_block;
+  unsigned int next_block;
   memcpy(&next_block, buffer_ptr, sizeof(next_block));
 
-  short bytes_allocated;
+  unsigned short bytes_allocated;
   memcpy(&bytes_allocated, buffer_ptr + sizeof(next_block), sizeof(bytes_allocated));
 
   int extraBlocks = 0;
@@ -296,7 +296,7 @@ int write_to_block(const void * buf, int block_num, int pointer, int amount) {
 	amount_written_to_block = BLOCKSIZE - pointer;
 	extraBlocks = 1;
 	// For every multiple of 1024 need another block for writing.
-	extraBlocks += (amount - (BLOCKSIZE - pointer)) / BLOCKSIZE;
+	extraBlocks += (amount - (BLOCKSIZE - pointer)) / (BLOCKSIZE - HEADER_SIZE);
 
 	buffer_ptr = buffer + pointer;
 	int counter = BLOCKSIZE - pointer;
@@ -339,8 +339,12 @@ int write_to_block(const void * buf, int block_num, int pointer, int amount) {
   int track_amount = amount - amount_written_to_block; //10000 - 1016 = 8984
   buf_ptr = (char *)buf + amount_written_to_block;
   int amount_to_write;
-  int current_block = next_block;
+  unsigned int current_block = next_block;
   // loop through for the necessary amount of blocks to hold the data.
+  if (amount > 1000000) {
+    printf("extraBlocks: %d\n", extraBlocks);
+	printf("expected blocks: %d\n", ((amount - amount_written_to_block) / 1016) + 1);
+  }
   for (i = 0; i < extraBlocks; i++) {
 	if (read_block(current_block, buffer) < 0) {
 	  printf("Error reading to block #%d\n", next_block);
@@ -380,7 +384,6 @@ int write_to_block(const void * buf, int block_num, int pointer, int amount) {
 		return -1;
 	  }
 	  setBlockInBitmapToStatus(1, next_block);
-	  
 	  if (initialize_header(next_block, 'f') < 0) {
 		return -1;
 	  }
@@ -396,20 +399,7 @@ int write_to_block(const void * buf, int block_num, int pointer, int amount) {
 
 	current_block = next_block;
   }
-  
-  // Copy over remainder of bytes
-  if (track_amount > 0) {
-		
-		// Read in header information
-		read_block(current_block, buffer);
-		
-		// Position buffer pointer at start of data
-		// buf_ptr should be at the correct location via the for loop above.
-		buffer_ptr = buffer + HEADER_SIZE;
-		
-		memcpy(buffer_ptr, buf_ptr, track_amount);
-		write_block(current_block, buffer);
-  }
+
   return 0;
 }
 

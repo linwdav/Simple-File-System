@@ -172,7 +172,7 @@ int my_read (int fd, void * buf, int count)
 		}  
 	
 	  // Read all bytes in starting at current_position until the end of the block.
-		memcpy(buf_ptr, &buffer[current_position], bytes_read_this_block);
+		memcpy(buf_ptr, &buffer[current_position], data_bytes_remaining);
 		
 		// update buf_ptr and open_files_current_position
 		buf_ptr += data_bytes_remaining;
