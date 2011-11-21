@@ -271,14 +271,14 @@ int my_remove (const char * path)
 	
   unsigned int block_nums[2];
   char * filename;
-  printf("In my_remove\n");
+
   // Get the filename of file to remove as well as block number of directory file is in, and
   // the root block number of the file as well.
   filename = parseRemoveNums(path, block_nums);
   if (block_nums[1] == -1) {
 	return -1;
   }
-  printf("After parsing: NAME: %s\tZERO: %d\tONE: %d\n", filename, block_nums[0], block_nums[1]);
+
   // If this file/directory is the last one in the directory block have to delete directory block
   // and redo next block pointers.
   unsigned int parent_blocks[2];
@@ -287,9 +287,8 @@ int my_remove (const char * path)
   if ((dir = get_parent_blocks(path, parent_blocks)) == NULL) {
 	return -1;
   }
-  printf("After parents: DIR: %s\nparentZERO: %d\tparentONE: %d\n", dir, parent_blocks[0], parent_blocks[1]);
  
-	close_file_if_open(block_nums[1]);
+  close_file_if_open(block_nums[1]);
   int next_block = block_nums[1];
 
   while(next_block != 0) {
@@ -300,12 +299,11 @@ int my_remove (const char * path)
 	    }	
    }
   
-  printf("After deleting file\n");
   // Remove the file's entry from the directory.
   if (removeEntry(filename, block_nums[0]) < 0) {
 	return -1;
   }
-  printf("After removing entry\n");
+
   if (update_directory_blocks(dir, parent_blocks) < 0) {
 	return -1;
   }
