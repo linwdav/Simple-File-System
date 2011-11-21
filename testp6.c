@@ -13,7 +13,6 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 #include "p6.h"
 
 char buffer0 [] = "hello world";
@@ -26,51 +25,8 @@ char buffer5 [200 * 1024 * 1024]; /* max size, 200MB */
 static int test_file (char * path, char * buffer, int size, int max_size);
 static void close_remove_file (char * path, int fd);
 
-void print_test(int fd) {
-  int block_num = get_associated_block_num(fd);
-  char buffer[5000];
-  char buffer_2[1024];
-  char * buf_ptr;
-  read_block(block_num, buffer);
-  char * buffer_ptr = buffer + 8;
-
-  int next_block;
-  memcpy(&next_block, buffer + 1, sizeof(next_block));
-
-  read_block(next_block, buffer_2);
-
-  memcpy(&next_block, buffer_2 + 1, sizeof(next_block));
-
-  buf_ptr = buffer_2 + 8;
-  memcpy(buffer_ptr + 1016, buf_ptr, 1016);
-
-  read_block(next_block, buffer_2);
-
-  memcpy(&next_block, buffer_2 + 1, sizeof(next_block));
-
-  buf_ptr = buffer_2 + 8;
-  memcpy(buffer_ptr + 2032, buf_ptr, 1016);
-
-  int j;
-  printf("PRINT_TEST, READING BY USING READ_BLOCK:\n");
-  int offended = 0;
-  for (j = 0; j < 3048; j++) {
-	if ((buffer_ptr[j] & 0xff) != ((j % 128) & 0xff)) {
-	  printf("OFFENDING BYTE AT: %d, value should of been %d but was %d\n", j, ((j % 128) & 0xff), (buffer_ptr[j] & 0xff));
-	  offended = 1;
-	}
-  }
-
-  if (offended == 0) {
-	printf("NO OFFENDING BYTES IN TEST\n");
-  }
-
-  printf("OFFENDING BYTE 2032: %d\n", buffer_ptr[2032]);
-}
-
 int main (int argc, char ** argv)
 {
-	
   int first_test = 1;
   int fd0, fd1, fd2, fd3, fd4, fd5;
   int i;
@@ -81,16 +37,10 @@ int main (int argc, char ** argv)
 
   printf ("testing files up to %d bytes\n", max_size);
   my_mkfs ();
-
   if (my_mkdir ("/foo") < 0) {  /* already tested before */
     printf ("second or subsequent test\n");
     first_test = 0;
   }
-  
-  /** INSERTED FOR TESTING **/
-  // fd0 = test_file ("/foo/bar0", buffer0, sizeof (buffer0), max_size);
-  /** REMOVE **/
-  
   if (my_rmdir ("/foo") < 0) {
     if (first_test) {
       printf ("unable to rmdir /foo\n");
@@ -169,7 +119,7 @@ static int test_file (char * path, char * buffer, int size, int max_size)
   if (large) {
     for (i = 0; i < size; i++)
       buffer [i] = i % 128;
-      buffer [0] = 0x77;		/* change value in location 0 */
+    buffer [0] = 0x77;		/* change value in location 0 */
     if (size / 2 > 1025)
       buffer [1025] = 0x99;	/* change a value after the first block */
     if (size / 2 > 1024 * 256 + 21)
@@ -246,7 +196,6 @@ static int test_file (char * path, char * buffer, int size, int max_size)
   if (large) {
     for (i = 0; i < size; i++) {
       if (((buffer [i]) & 0xff) != ((i % 128) & 0xff)) {
-		print_test(fd);
         printf ("error at index %d (of %d), value %d, expected %d\n",
 	        i, size, ((buffer [i]) & 0xff), ((i % 128) & 0xff));
         exit (1);

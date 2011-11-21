@@ -379,7 +379,6 @@ int write_to_block(const void * buf, unsigned int block_num, int pointer, int am
 	  if ((next_block = requestNextFreeBlock()) < 0) {
 		return -1;
 	  }
-		printf("BLOCK: %i\n", next_block);
 	  setBlockInBitmapToStatus(1, next_block);
 	  if (initialize_header(next_block, 'f') < 0) {
 		return -1;

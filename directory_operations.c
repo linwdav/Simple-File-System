@@ -338,8 +338,6 @@ int deleteFileRecursively(unsigned int blockNum, char * buffer) {
   
   unsigned int nextBlock;
   memcpy(&nextBlock, buffer + 1, sizeof(nextBlock));
-
-	printf("Deleting BLOCK: %i\t NEXT_BLOCK: %i\n", blockNum, nextBlock);
 	
   if (deleteBlock(blockNum) < 0) {
 	  return -1;
