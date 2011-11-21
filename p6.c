@@ -193,20 +193,11 @@ int my_read (int fd, void * buf, int count)
 		if (current_block_num != 0 && count > 0) {
 		  get_file_block_and_header_information(buffer, current_block_num, &next_block, &bytes_allocated);
  	  } 
-    // If count > 0, and the next block == 0, that means there is too much to read.  Just return the
-    // amount we were able to read.  Could also be that this is the last block and count == 0.  just return 
-    // as well.
-    else {
-			return bytes_read;
-    }
-
 		data_bytes_remaining = bytes_allocated - HEADER_SIZE;
   } // End while
 
   // Handle remainder of bytes
   if (count > 0) {
-	
-	
 		int new_current_position = current_position;
 		
 		if (current_position < HEADER_SIZE) {

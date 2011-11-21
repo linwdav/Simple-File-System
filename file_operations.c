@@ -396,7 +396,20 @@ int write_to_block(const void * buf, int block_num, int pointer, int amount) {
 
 	current_block = next_block;
   }
-
+  
+  // Copy over remainder of bytes
+  if (track_amount > 0) {
+		
+		// Read in header information
+		read_block(current_block, buffer);
+		
+		// Position buffer pointer at start of data
+		// buf_ptr should be at the correct location via the for loop above.
+		buffer_ptr = buffer + HEADER_SIZE;
+		
+		memcpy(buffer_ptr, buf_ptr, track_amount);
+		write_block(current_block, buffer);
+  }
   return 0;
 }
 
