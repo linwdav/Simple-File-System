@@ -341,10 +341,6 @@ int write_to_block(const void * buf, unsigned int block_num, int pointer, int am
   int amount_to_write;
   unsigned int current_block = next_block;
   // loop through for the necessary amount of blocks to hold the data.
-  if (amount > 1000000) {
-    printf("extraBlocks: %d\n", extraBlocks);
-	printf("expected blocks: %d\n", ((amount - amount_written_to_block) / 1016) + 1);
-  }
   for (i = 0; i < extraBlocks; i++) {
 	if (read_block(current_block, buffer) < 0) {
 	  printf("Error reading to block #%d\n", next_block);
@@ -383,6 +379,7 @@ int write_to_block(const void * buf, unsigned int block_num, int pointer, int am
 	  if ((next_block = requestNextFreeBlock()) < 0) {
 		return -1;
 	  }
+		printf("BLOCK: %i\n", next_block);
 	  setBlockInBitmapToStatus(1, next_block);
 	  if (initialize_header(next_block, 'f') < 0) {
 		return -1;

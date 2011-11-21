@@ -223,8 +223,8 @@ int my_read (int fd, void * buf, int count)
 /* sequentially write to a file */
 int my_write (int fd, const void * buf, int count)
 {
-  int block_num = open_files[fd];
-  int pointer = open_files_current_position[fd];
+  unsigned int block_num = open_files[fd];
+  unsigned int pointer = open_files_current_position[fd];
   int num_blocks = pointer / BLOCKSIZE;
   int remainder = pointer % BLOCKSIZE;
 
@@ -267,34 +267,45 @@ int my_close (int fd)
 
 int my_remove (const char * path)
 {
-  int block_nums[2];
+	char buffer[BLOCKSIZE];
+	
+  unsigned int block_nums[2];
   char * filename;
-
+  printf("In my_remove\n");
   // Get the filename of file to remove as well as block number of directory file is in, and
   // the root block number of the file as well.
   filename = parseRemoveNums(path, block_nums);
   if (block_nums[1] == -1) {
 	return -1;
   }
-
+  printf("After parsing: NAME: %s\tZERO: %d\tONE: %d\n", filename, block_nums[0], block_nums[1]);
   // If this file/directory is the last one in the directory block have to delete directory block
   // and redo next block pointers.
-  int parent_blocks[2];
+  unsigned int parent_blocks[2];
   char * dir = malloc((FILENAME_SIZE + 1) * sizeof(char));
 
   if ((dir = get_parent_blocks(path, parent_blocks)) == NULL) {
 	return -1;
   }
-  
-  if (deleteFileRecursively(block_nums[1]) < 0) {
-	return -1;
-  }
+  printf("After parents: DIR: %s\nparentZERO: %d\tparentONE: %d\n", dir, parent_blocks[0], parent_blocks[1]);
+ 
+	close_file_if_open(block_nums[1]);
+  int next_block = block_nums[1];
 
+  while(next_block != 0) {
+			next_block = deleteFileRecursively(next_block, buffer);
+	
+	    if (next_block < 0) {
+		    return -1;
+	    }	
+   }
+  
+  printf("After deleting file\n");
   // Remove the file's entry from the directory.
   if (removeEntry(filename, block_nums[0]) < 0) {
 	return -1;
   }
-  
+  printf("After removing entry\n");
   if (update_directory_blocks(dir, parent_blocks) < 0) {
 	return -1;
   }
@@ -307,7 +318,7 @@ int my_remove (const char * path)
 
 int my_rename (const char * old, const char * new)
 {
-  int blockNums[2];
+  unsigned int blockNums[2];
   char * oldFile;
 
   // find the block number of where the old entry is.
@@ -344,7 +355,7 @@ int my_mkdir (const char * path)
 
 int my_rmdir (const char * path)
 {
-  int blockNums[2];
+  unsigned int blockNums[2];
   char * filename;
 
   filename = parseRemoveNums(path, blockNums);
@@ -352,7 +363,7 @@ int my_rmdir (const char * path)
     return -1;
   }
 
-  int parent_blocks[2];
+  unsigned int parent_blocks[2];
   char * dir;
   if ((dir = get_parent_blocks(path, parent_blocks)) == NULL) {
 	return -1;

@@ -1,6 +1,9 @@
 #include "directory_operations.h"
 
 #define DEBUG 0
+
+int check_directory_exists(char * directory, unsigned int blockNum);
+
 /* Used when creating a directory.  Returns the block number of the directory block in which
  * to place the new entry and the block number of the first free block available for the new
  * directory.
@@ -9,9 +12,9 @@
  * already existing directory, needed for pairing with name in directory.
  * flag - whether renaming or creating a new directory.
  */
-int parseAndCreateDirectory(const char * path, int rename_start_block, char flag) {
+int parseAndCreateDirectory(const char * path, unsigned int rename_start_block, char flag) {
   // Start at root.
-  int parentDirectory = 0;
+  unsigned int parentDirectory = 0;
 
   char * token = strchr(path, '/') + 1;
   char * nextToken = strchr(token, '/');
@@ -36,7 +39,7 @@ int parseAndCreateDirectory(const char * path, int rename_start_block, char flag
 		return -1;
 	  }
 
-	  int exists;
+	  unsigned int exists;
 	  // Check if directory exists before trying to add it, if it does return error.
 	  if ((exists = check_directory_exists(directory, parentDirectory)) > 0) {
 		printf("Directory %s already exists in block %d\n", directory, exists);
@@ -46,7 +49,7 @@ int parseAndCreateDirectory(const char * path, int rename_start_block, char flag
 	  // Not creating a new directory simply renaming it.
 	  if (flag == 'r') {
 		// Add entry with name: directory, starting block number: rename_start_block, to the directory: parentDirectory
-	    if ((parentDirectory = addEntry(directory, rename_start_block, parentDirectory)) < 0) {
+	    if (addEntry(directory, rename_start_block, &parentDirectory) < 0) {
 		  return -1;
 	    }
 
@@ -57,7 +60,7 @@ int parseAndCreateDirectory(const char * path, int rename_start_block, char flag
 	    return 0;
 	  }
 
-	  int newBlockNum;
+	  unsigned int newBlockNum;
 	  if ((newBlockNum = requestNextFreeBlock()) < 0) {
 		printf("No more free blocks\n");
 		return -1;
@@ -77,11 +80,11 @@ int parseAndCreateDirectory(const char * path, int rename_start_block, char flag
 	  char * newBlock_ptr = newBlock + 1;
 
 	  // No next block.
-	  int nextBlock = 0;
+	  unsigned int nextBlock = 0;
 	  memcpy(newBlock_ptr, &nextBlock, sizeof(nextBlock));
 
 	  // No data except header.
-	  short bytesAllocated = HEADER_SIZE;
+	  unsigned short bytesAllocated = HEADER_SIZE;
 	  memcpy(newBlock_ptr + sizeof(nextBlock), &bytesAllocated, sizeof(bytesAllocated));
 
 	  if (write_block(newBlockNum, newBlock) < 0) {
@@ -90,7 +93,7 @@ int parseAndCreateDirectory(const char * path, int rename_start_block, char flag
 	  }
 
 	  // Add entry with name: directory, starting block number: newBlockNum, to the directory: parentDirectory
-	  if ((parentDirectory = addEntry(directory, newBlockNum, parentDirectory)) < 0) {
+	  if (addEntry(directory, newBlockNum, &parentDirectory) < 0) {
 		return -1;
 	  }
 	  if (DEBUG) {
@@ -102,7 +105,7 @@ int parseAndCreateDirectory(const char * path, int rename_start_block, char flag
 
 	// Nested path so update the parentDirectory number to be the next one in the path.
 	// Ex. directory = foo (from /foo/bar), so starting in root directory (0) look for foo and return it's starting block
-	if ((parentDirectory = updateParentDirectoryNum(directory, parentDirectory)) < 0) {
+	if (updateParentDirectoryNum(directory, &parentDirectory) < 0) {
 	  printf("Couldn't update parent directory number\nwith directory %s at block number %d\n", directory, parentDirectory);
 	  return -1;
 	}
@@ -121,13 +124,15 @@ int parseAndCreateDirectory(const char * path, int rename_start_block, char flag
 	  directory[nextToken - token] = '\0';
 	}
   }
+
+  return -1;
 }
 
 /* Parse the path given to the function.  Returns the block number of the parent directory and
  * the last file in the path.  Ex. /foo/bar/hello.txt would return the block numbers for the
  * directory bar and first block in hello.txt.
  */
-char * parseRemoveNums(const char * path, int blockNums[2]) {
+char * parseRemoveNums(const char * path, unsigned int blockNums[2]) {
   blockNums[0] = 0;
 
   char * token = strchr(path, '/') + 1;
@@ -175,7 +180,7 @@ char * parseRemoveNums(const char * path, int blockNums[2]) {
  * through the directory comparing the filename given to each file/directory
  * within the directory until it finds a match.
  */
-int findNextBlockNum(char *filename, int blockNums[2]) {
+int findNextBlockNum(char *filename, unsigned int blockNums[2]) {
 	char buffer[BLOCKSIZE];
 	if (read_block(blockNums[0], buffer) < 0) {
 	  printf("Error reading block #%d\n", blockNums[0]);
@@ -184,10 +189,10 @@ int findNextBlockNum(char *filename, int blockNums[2]) {
 
 	char *buffer_ptr = buffer + 1;
 
-	int nextBlock;
+	unsigned int nextBlock;
 	memcpy(&nextBlock, buffer_ptr, sizeof(nextBlock));
 
-	short bytesAllocated;
+	unsigned short bytesAllocated;
 	memcpy(&bytesAllocated, buffer_ptr + sizeof(nextBlock), sizeof(bytesAllocated));
 	int loops = bytesAllocated / FILE_NUM_PAIRINGS_SIZE;
 	buffer_ptr = buffer + HEADER_SIZE;
@@ -219,8 +224,9 @@ int findNextBlockNum(char *filename, int blockNums[2]) {
  * starts to delete files.  If it encounters a directory it goes to the last block of that
  * directory and deletes that directory recursively, then keeps deleting the previous directory.
  */
-int deleteDirectoryRecursively(int blockNum) {
+int deleteDirectoryRecursively(unsigned int blockNum) {
   char buffer[BLOCKSIZE];
+	char file_remove_buffer[BLOCKSIZE];
 
   if (read_block(blockNum, buffer) < 0) {
     printf("Error reading block #%d\n", blockNum);
@@ -228,16 +234,16 @@ int deleteDirectoryRecursively(int blockNum) {
   }
 
   char *buffer_ptr = buffer;
-  int nextBlock;
+  unsigned int nextBlock;
   memcpy(&nextBlock, ++buffer_ptr, sizeof(nextBlock));
 
-  short bytesAllocated;
+  unsigned short bytesAllocated;
   memcpy(&bytesAllocated, buffer_ptr + sizeof(nextBlock), sizeof(bytesAllocated));
   int loops = bytesAllocated / FILE_NUM_PAIRINGS_SIZE;
 
   int i;
   char fileType;
-  int fileStartBlock;
+  unsigned int fileStartBlock;
 
   // Last block for directory
   if (nextBlock == 0) {
@@ -251,15 +257,21 @@ int deleteDirectoryRecursively(int blockNum) {
 	  memcpy(&fileStartBlock, buffer_ptr + FILENAME_SIZE, sizeof(fileStartBlock));
 	  fileType = determineFileType(fileStartBlock);
 	  if (fileType == 'f') {
-		close_file_if_open(fileStartBlock);
-        if (deleteFileRecursively(fileStartBlock) < 0) {
-		  return -1;
-		}
-      }
-      else {
+		  close_file_if_open(fileStartBlock);
+		  int next_block = fileStartBlock;
+		
+		  while(next_block != 0) {
+					next_block = deleteFileRecursively(next_block, file_remove_buffer);
+			
+			    if (next_block < 0) {
+				    return -1;
+			    }	
+		   }
+    }
+    else {
 	    if (deleteDirectoryRecursively(fileStartBlock) < 0) {
-		  return -1;
-		}
+		    return -1;
+		  }
 	  }
 
 	  loops--;
@@ -285,11 +297,17 @@ int deleteDirectoryRecursively(int blockNum) {
 	  memcpy(&fileStartBlock, buffer_ptr + FILENAME_SIZE, sizeof(fileStartBlock));
 	  fileType = determineFileType(fileStartBlock);
 	  if (fileType == 'f') {
-		close_file_if_open(fileStartBlock);
-        if (deleteFileRecursively(fileStartBlock) < 0) {
-		  return -1;
+			close_file_if_open(fileStartBlock);
+		  int next_block = fileStartBlock;
+		
+		  while(next_block != 0) {
+					next_block = deleteFileRecursively(next_block, file_remove_buffer);
+			
+			    if (next_block < 0) {
+				    return -1;
+			    }	
+		   }
 		}
-      }
       else {
 	    if (deleteDirectoryRecursively(fileStartBlock) < 0) {
 		  return -1;
@@ -311,73 +329,42 @@ int deleteDirectoryRecursively(int blockNum) {
 /* Delete file starting at last block and working backwards.
  * 
  */
-int deleteFileRecursively(int blockNum) {
-  char buffer[BLOCKSIZE];
+int deleteFileRecursively(unsigned int blockNum, char * buffer) {
 
   if (read_block(blockNum, buffer) < 0) {
     printf("Error reading block #%d\n", blockNum);
     return -1;
   }
-
-  char * buffer_ptr = buffer;
   
-  int nextBlock;
-  memcpy(&nextBlock, buffer_ptr+1, sizeof(nextBlock));
+  unsigned int nextBlock;
+  memcpy(&nextBlock, buffer + 1, sizeof(nextBlock));
 
-  if (nextBlock == 0) {
-    // flip the bit in the freeblock bitmap
-    if (deleteBlock(blockNum) < 0) {
+	printf("Deleting BLOCK: %i\t NEXT_BLOCK: %i\n", blockNum, nextBlock);
+	
+  if (deleteBlock(blockNum) < 0) {
 	  return -1;
-	}
-
-  }
-  else {
-    if (deleteFileRecursively(nextBlock) < 0) {
-	  return -1;
-	}
-    // flip the bit in the freeblock bitmap
-    if (deleteBlock(blockNum) < 0) {
-	  return -1;
-	}
-
   }
 
-  return 0;
+	return nextBlock;
 }
 
 /* Deleting a block means: setting the bit, corresponding to the block, in the freemap to be 0
  * and setting every byte in the block to be '\0'.
  */
-int deleteBlock(int blockNum) {
+int deleteBlock(unsigned int blockNum) {
   char buffer[BLOCKSIZE];
-  int freeblockBlock = 2;
 
-  freeblockBlock += (blockNum / BLOCKSIZE);
+  setBlockInBitmapToStatus(0, blockNum);
 
-  if (read_block(freeblockBlock, buffer) < 0) {
-    printf("Error reading block #%d\n", freeblockBlock);
-    return -1;
-  }
-
-  int byteToChange = (blockNum % BLOCKSIZE) / 8; //blockNum = 45, byteToChange = 5 (index into buffer) so 6th element
-  int byteRemainder = 7 - (blockNum % BLOCKSIZE) % 8; // byteRemainder = 5 
-
-  char mask = 0x01; // 0000 0001
-  mask = mask << byteRemainder; // 0010 0000
-
-  buffer[byteToChange] ^= mask; // buffer[byteToChange] =  1010 1010
-													// XOR 0010 0000
-													//     1000 1010
-
-  if (write_block(freeblockBlock, buffer) < 0) {
-    printf("Error writing block #%d\n", freeblockBlock);
+  if (read_block(blockNum, buffer) < 0) {
+    printf("Error Reading block #%d\n", blockNum);
     return -1;
   }
 
   // Reset block to all 0's
   memset(buffer, '\0', BLOCKSIZE);
   if (write_block(blockNum, buffer) < 0) {
-    printf("Error writing block #%d\n", freeblockBlock);
+    printf("Error writing block #%d\n", blockNum);
     return -1;
   }
 
@@ -391,7 +378,7 @@ int deleteBlock(int blockNum) {
 /* Helper function to determine file type of block.
  * 
  */
-char determineFileType(int blockNum) {
+char determineFileType(unsigned int blockNum) {
   char buffer[BLOCKSIZE];
 
   if (read_block(blockNum, buffer) < 0) {
@@ -408,7 +395,7 @@ char determineFileType(int blockNum) {
  * filename - The name of the directory/file to remove.
  * blockNum - The block number of the directory that has the entry.
  */
-int removeEntry(char * filename, int blockNum) {
+int removeEntry(char * filename, unsigned int blockNum) {
   char buffer[BLOCKSIZE];
 
   if (read_block(blockNum, buffer) < 0) {
@@ -417,7 +404,7 @@ int removeEntry(char * filename, int blockNum) {
   }
 
   char * buffer_ptr = buffer + 1;
-  short bytesAllocated;
+  unsigned short bytesAllocated;
   memcpy(&bytesAllocated, buffer_ptr + sizeof(int), sizeof(bytesAllocated));
 
   int loops = bytesAllocated / FILE_NUM_PAIRINGS_SIZE;
@@ -477,19 +464,19 @@ int removeEntry(char * filename, int blockNum) {
  * newBlock - the block number associated with the directory.
  * parentBlock - the directory to place the entry in.
  */
-int addEntry(char directory[FILENAME_SIZE], int newBlock, int parentBlock) {
+int addEntry(char directory[FILENAME_SIZE], unsigned int newBlock, unsigned int * parentBlock) {
 	char buffer[BLOCKSIZE];
 
-	if (read_block(parentBlock, buffer) < 0) {
-	  printf("Error reading block #%d\n", parentBlock);
+	if (read_block(*parentBlock, buffer) < 0) {
+	  printf("Error reading block #%d\n", *parentBlock);
 	  return -1;
 	}
 	char * buffer_ptr = buffer + 1;
 
-	int nextBlock;
+	unsigned int nextBlock;
 	memcpy(&nextBlock, buffer_ptr, sizeof(nextBlock));
 
-	short bytesAllocated;
+	unsigned short bytesAllocated;
 	memcpy(&bytesAllocated, buffer_ptr + sizeof(nextBlock), sizeof(bytesAllocated));
 
 	// There is not enough free space in this block
@@ -497,7 +484,7 @@ int addEntry(char directory[FILENAME_SIZE], int newBlock, int parentBlock) {
 
 		//There is no next block so have to create one.
 		if (nextBlock == 0) {
-		  int newNextBlock;
+		  unsigned int newNextBlock;
 		  if ((newNextBlock = requestNextFreeBlock()) < 0) {
 			return -1;
 		  }
@@ -517,7 +504,7 @@ int addEntry(char directory[FILENAME_SIZE], int newBlock, int parentBlock) {
 		  memcpy(buffer_ptr, &nextBlock, sizeof(nextBlock));
 
 		  // new allocation should be 8 + 204 for new entry being added
-		  short newAllocation = HEADER_SIZE + FILE_NUM_PAIRINGS_SIZE;
+		  unsigned short newAllocation = HEADER_SIZE + FILE_NUM_PAIRINGS_SIZE;
 		  memcpy(buffer_ptr + sizeof(nextBlock), &newAllocation, sizeof(newAllocation));
 
 		  // add in the filename block number entry to the new directory block.
@@ -534,17 +521,18 @@ int addEntry(char directory[FILENAME_SIZE], int newBlock, int parentBlock) {
 		  buffer_ptr = buffer + 1;
 		  memcpy(buffer_ptr, &newNextBlock, sizeof(newNextBlock));
 
-		  if (write_block(parentBlock, buffer) < 0) {
-			printf("Error writing block #%d\n", newNextBlock);
+		  if (write_block(*parentBlock, buffer) < 0) {
+			printf("Error writing block #%d\n", *parentBlock);
 			return -1;
 		  }
 
-		  return newNextBlock;
+		  memcpy(parentBlock, &newNextBlock, sizeof(newNextBlock));
+		  return 0;
 		}
 		// Directory block is full but there is a next block.
 		else {
 			// recursive call that tries to add the new directory to the new block.
-			return addEntry(directory, newBlock, nextBlock);
+			return addEntry(directory, newBlock, &nextBlock);
 		}
 	}
 	// There is enough space in the block.
@@ -562,12 +550,12 @@ int addEntry(char directory[FILENAME_SIZE], int newBlock, int parentBlock) {
 	  bytesAllocated = bytesAllocated + FILE_NUM_PAIRINGS_SIZE;
 	  memcpy(buffer_ptr, &bytesAllocated, sizeof(bytesAllocated));
 
-	  if (write_block(parentBlock, buffer) < 0) {
-		printf("Error writing block #%d\n", parentBlock);
+	  if (write_block(*parentBlock, buffer) < 0) {
+		printf("Error writing block #%d\n", *parentBlock);
 		return -1;
 	  }
 
-	  return parentBlock;
+	  return 0;
 	}
 }
 
@@ -577,20 +565,20 @@ int addEntry(char directory[FILENAME_SIZE], int newBlock, int parentBlock) {
  * directory - The name of the file/directory you are searching for.
  * parentDirectory - The block number of the directory you are searching through.
  */
-int updateParentDirectoryNum(char directory[FILENAME_SIZE], int parentDirectory) {
+int updateParentDirectoryNum(char directory[FILENAME_SIZE], unsigned int * parentDirectory) {
   char buffer[BLOCKSIZE];
 
-  if (read_block(parentDirectory, buffer) < 0) {
-	printf("Error reading block #%d\n", parentDirectory);
+  if (read_block(*parentDirectory, buffer) < 0) {
+	printf("Error reading block #%d\n", *parentDirectory);
 	return -1;
   }
 
   char * buffer_ptr = buffer + 1;
 
-  int nextBlock;
+  unsigned int nextBlock;
   memcpy(&nextBlock, buffer_ptr, sizeof(nextBlock));
 
-  short bytesAllocated;
+  unsigned short bytesAllocated;
   memcpy(&bytesAllocated, buffer_ptr + sizeof(nextBlock), sizeof(bytesAllocated));
 
   int loops = bytesAllocated / FILE_NUM_PAIRINGS_SIZE;
@@ -605,9 +593,10 @@ int updateParentDirectoryNum(char directory[FILENAME_SIZE], int parentDirectory)
 		name[FILENAME_SIZE] = '\0';
 
 		if (strcmp(name, directory) == 0) {
-		  int associatedNum;
+		  unsigned int associatedNum;
 		  memcpy(&associatedNum, buffer_ptr + FILENAME_SIZE, sizeof(associatedNum));
-		  return associatedNum;
+		  memcpy(parentDirectory, &associatedNum, sizeof(parentDirectory));
+		  return 0;
 		}
 
 		loops--;
@@ -618,11 +607,15 @@ int updateParentDirectoryNum(char directory[FILENAME_SIZE], int parentDirectory)
   // There is a next block.
   else {
 	// First recursively check if the directory is in later blocks.
-	int check = updateParentDirectoryNum(directory, nextBlock);
+	unsigned int check = nextBlock;
+	if (updateParentDirectoryNum(directory, &check) < 0) {
+	  return -1;
+	}
 
 	// If it was then return the number of the block that has the directory.
 	if (check > 0) {
-	  return check;
+	  memcpy(parentDirectory, &check, sizeof(parentDirectory));
+	  return 0;
 	}
 
 	// Wasn't in other blocks so check this one.
@@ -633,9 +626,10 @@ int updateParentDirectoryNum(char directory[FILENAME_SIZE], int parentDirectory)
 	  name[FILENAME_SIZE] = '\0';
 
 	  if (strcmp(name, directory) == 0) {
-		int associatedNum;
+		unsigned int associatedNum;
 		memcpy(&associatedNum, buffer_ptr + FILENAME_SIZE, sizeof(associatedNum));
-		return associatedNum;
+		memcpy(parentDirectory, &associatedNum, sizeof(parentDirectory));
+		return 0;
 	  }
 
 	  loops--;
@@ -650,7 +644,7 @@ int updateParentDirectoryNum(char directory[FILENAME_SIZE], int parentDirectory)
  * directory - the name of the directory to check for.
  * blockNum - the block number of the directory to check in.
  */
-int check_directory_exists(char * directory, int blockNum) {
+int check_directory_exists(char * directory, unsigned int blockNum) {
 	char buffer[1024];
 
 	if (read_block(blockNum, buffer) < 0) {
@@ -660,10 +654,10 @@ int check_directory_exists(char * directory, int blockNum) {
 
 	char * buffer_ptr = buffer + 1;
 
-	int nextBlock;
+	unsigned int nextBlock;
 	memcpy(&nextBlock, buffer_ptr, sizeof(nextBlock));
 
-	short bytesAllocated;
+	unsigned short bytesAllocated;
 	memcpy(&bytesAllocated, buffer_ptr + sizeof(nextBlock), sizeof(bytesAllocated));
 
 	int loops = bytesAllocated / FILE_NUM_PAIRINGS_SIZE;
@@ -675,22 +669,22 @@ int check_directory_exists(char * directory, int blockNum) {
 
 	  // If the filename is the same as the one trying to add, return error
 	  if (strcmp(check_filename, directory) == 0) {
-		return blockNum;
+		return 0;
 	  }
 
 	  loops--;
 	  buffer_ptr = buffer_ptr + FILE_NUM_PAIRINGS_SIZE;
 	}
 
-	int check = -1;
+	unsigned int check = -1;
 	if (nextBlock != 0) {
 	  check = check_directory_exists(directory, nextBlock);
 	}
 
-	return check;
+	return 0;
 }
 
-char * get_parent_blocks(const char * path, int parent_blocks[2]) {
+char * get_parent_blocks(const char * path, unsigned int parent_blocks[2]) {
   parent_blocks[0] = 0;
   parent_blocks[1] = 0;
 
@@ -753,7 +747,7 @@ char * get_parent_blocks(const char * path, int parent_blocks[2]) {
   }
 }
 
-int contains_file(char * name, char * final_name, int parent_block[2]) {
+int contains_file(char * name, char * final_name, unsigned int parent_block[2]) {
   char buffer[BLOCKSIZE];
 
   if (read_block(parent_block[1], buffer) < 0) {
@@ -761,7 +755,7 @@ int contains_file(char * name, char * final_name, int parent_block[2]) {
 	return -3;
   }
 
-  short bytesAllocated;
+  unsigned short bytesAllocated;
   memcpy(&bytesAllocated, buffer + 1 + sizeof(int), sizeof(bytesAllocated));
 
   int loops = bytesAllocated / FILE_NUM_PAIRINGS_SIZE;
@@ -777,7 +771,7 @@ int contains_file(char * name, char * final_name, int parent_block[2]) {
 	  if (strcmp(name, final_name) == 0) {
 		return -1;
 	  }
-	  int num;
+	  unsigned int num;
 	  memcpy(&num, buffer + offset + FILENAME_SIZE, sizeof(num));
 
 	  parent_block[0] = parent_block[1];
@@ -787,7 +781,7 @@ int contains_file(char * name, char * final_name, int parent_block[2]) {
 	}
   }
 
-  int next_block;
+  unsigned int next_block;
   memcpy(&next_block, buffer + 1, sizeof(next_block));
 
   parent_block[0] = parent_block[1];
@@ -795,7 +789,7 @@ int contains_file(char * name, char * final_name, int parent_block[2]) {
   return -2;
 }
 
-int update_directory_blocks(char * dir, int blocks[2]) {
+int update_directory_blocks(char * dir, unsigned int blocks[2]) {
 	char buffer_one[BLOCKSIZE];
 
 	if (blocks[0] == blocks[1]) {
@@ -807,7 +801,7 @@ int update_directory_blocks(char * dir, int blocks[2]) {
 	  return -1;
 	}
 
-	short bytes_allocated;
+	unsigned short bytes_allocated;
 	memcpy(&bytes_allocated, buffer_one + 1 + sizeof(int), sizeof(bytes_allocated));
 
 	if (bytes_allocated < (FILE_NUM_PAIRINGS_SIZE + HEADER_SIZE)) {
@@ -818,10 +812,10 @@ int update_directory_blocks(char * dir, int blocks[2]) {
 	    return -1;
 	  }
 
-	  int next_block;
+	  unsigned int next_block;
 	  memcpy(&next_block, buffer_one + 1, sizeof(next_block));
 
-	  short loop_bytes;
+	  unsigned short loop_bytes;
 	  memcpy(&loop_bytes, buffer_zero + 1 + sizeof(int), sizeof(loop_bytes));
 	  int loops = loop_bytes / FILE_NUM_PAIRINGS_SIZE;
 
@@ -833,7 +827,7 @@ int update_directory_blocks(char * dir, int blocks[2]) {
 		  strncpy(filename, buf_zero_ptr, FILENAME_SIZE);
 		  filename[FILENAME_SIZE] = '\0';
 		  if (strcmp(filename, dir) == 0) {
-			int num;
+			unsigned int num;
 			memcpy(&num, buf_zero_ptr + FILENAME_SIZE, sizeof(num));
 
 			if (num == blocks[1]) {

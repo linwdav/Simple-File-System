@@ -70,6 +70,7 @@ void print_test(int fd) {
 
 int main (int argc, char ** argv)
 {
+	
   int first_test = 1;
   int fd0, fd1, fd2, fd3, fd4, fd5;
   int i;
@@ -80,6 +81,7 @@ int main (int argc, char ** argv)
 
   printf ("testing files up to %d bytes\n", max_size);
   my_mkfs ();
+
   if (my_mkdir ("/foo") < 0) {  /* already tested before */
     printf ("second or subsequent test\n");
     first_test = 0;

@@ -10,17 +10,17 @@
 #define FILE_NUM_PAIRINGS_SIZE (200 + sizeof(int))
 #define FILENAME_SIZE 200
 
-int parseAndCreateDirectory(const char * path, int rename_start_block, char flag);
-char * parseRemoveNums(const char * path, int blockNums[2]);
-int findNextBlockNum(char * filename, int blockNums[2]);
-int deleteDirectoryRecursively(int blockNum);
-int deleteFileRecursively(int blockNum);
-int deleteBlock(int blockNum);
-char determineFileType(int blockNum);
-int removeEntry(char * filename, int blockNum);
-int addEntry(char directory[FILENAME_SIZE], int newBlock, int parentBlock);
-int updateParentDirectoryNum(char directory[FILENAME_SIZE], int parentDirectory);
-char * get_parent_blocks(const char * path, int parent_blocks[2]);
-int update_directory_blocks(char * dir, int blocks[2]);
+int parseAndCreateDirectory(const char * path, unsigned int rename_start_block, char flag);
+char * parseRemoveNums(const char * path, unsigned int blockNums[2]);
+int findNextBlockNum(char * filename, unsigned int blockNums[2]);
+int deleteDirectoryRecursively(unsigned int blockNum);
+int deleteFileRecursively(unsigned int blockNum, char * buffer);
+int deleteBlock(unsigned int blockNum);
+char determineFileType(unsigned int blockNum);
+int removeEntry(char * filename, unsigned int blockNum);
+int addEntry(char directory[FILENAME_SIZE], unsigned int newBlock, unsigned int * parentBlock);
+int updateParentDirectoryNum(char directory[FILENAME_SIZE], unsigned int * parentDirectory);
+char * get_parent_blocks(const char * path, unsigned int parent_blocks[2]);
+int update_directory_blocks(char * dir, unsigned int blocks[2]);
 
 #endif
